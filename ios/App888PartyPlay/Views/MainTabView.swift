@@ -1540,8 +1540,8 @@ struct ProfileView: View {
                     }
                     if let pid = appModel.publicUserID {
                         Text("ID #\(pid)")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
                     }
                 }
                 Spacer(minLength: 0)
