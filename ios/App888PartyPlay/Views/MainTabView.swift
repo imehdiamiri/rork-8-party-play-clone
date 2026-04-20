@@ -859,18 +859,24 @@ struct FriendsView: View {
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Button(result.relationshipState.buttonTitle) {
+                        Button {
                             appModel.sendFriendRequest(to: result)
+                        } label: {
+                            Text(result.relationshipState.buttonTitle)
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(result.relationshipState.isActionable ? .white : .secondary)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(
+                                    result.relationshipState.isActionable ? Color.blue : .white.opacity(0.06),
+                                    in: .capsule
+                                )
                         }
                         .buttonStyle(.plain)
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(result.relationshipState.isActionable ? .white.opacity(0.065) : .clear, in: .rect(cornerRadius: 12))
                         .disabled(!result.relationshipState.isActionable)
-                        .foregroundStyle(result.relationshipState.isActionable ? .primary : .secondary)
                     }
                     .padding(.vertical, 6)
+                    .contentShape(.rect)
                 }
             }
         }
