@@ -13,6 +13,10 @@ struct GuessTheSecondsSessionView: View {
     @State private var multiElapsedTime: Double = 0
     @State private var multiSelectedTime: Double = 15
     @State private var multiCompletedCount: Int = 0
+    @State private var multiLastActual: Double = 0
+    @State private var multiLastTarget: Double = 0
+    @State private var multiLastDiff: Double = 0
+    @State private var multiLastRound: Int = 0
 
     private var isMultiDevice: Bool {
         session.mode != .singleDevice && session.guessTheSecondsState != nil
@@ -101,6 +105,14 @@ struct GuessTheSecondsSessionView: View {
                     }
 
                     if !gts.isFinished {
+                        if multiLastActual > 0 && !multiIsRunning {
+                            lastResultBanner(
+                                target: multiLastTarget,
+                                actual: multiLastActual,
+                                diff: multiLastDiff,
+                                round: multiLastRound
+                            )
+                        }
                         SurfaceCard {
                             VStack(alignment: .leading, spacing: 18) {
                                 if isMyTurn {
@@ -195,18 +207,75 @@ struct GuessTheSecondsSessionView: View {
         multiStartedAt = Date()
         multiElapsedTime = 0
         multiIsRunning = true
+        multiLastActual = 0
+        multiLastDiff = 0
+        multiLastTarget = 0
+        multiLastRound = 0
         FeedbackService.shared.playTimerStart()
     }
 
     private func multiStopTurn() {
         guard multiIsRunning, let startedAt = multiStartedAt else { return }
-        let actualTime = Date().timeIntervalSince(startedAt)
+        let actualTime = ((Date().timeIntervalSince(startedAt) * 100).rounded()) / 100
         multiIsRunning = false
         multiStartedAt = nil
         multiElapsedTime = actualTime
         multiCompletedCount += 1
+        if let gts = appModel.activeSession?.guessTheSecondsState {
+            let playerCount = (appModel.activeSession?.players.count ?? session.players.count)
+            let roundNumber = gts.currentRoundNumber(playerCount: playerCount)
+            let target = gts.roundTargets[roundNumber] ?? (((multiSelectedTime * 100).rounded()) / 100)
+            let diff = ((abs(target - actualTime) * 100).rounded()) / 100
+            multiLastTarget = target
+            multiLastActual = actualTime
+            multiLastDiff = diff
+            multiLastRound = roundNumber
+        }
         FeedbackService.shared.playTimerStop()
         appModel.submitGTSTurnResult(actualTime: actualTime)
+    }
+
+    private func lastResultBanner(target: Double, actual: Double, diff: Double, round: Int) -> some View {
+        let band = GuessTheSecondsSessionViewModel.AccuracyBand(difference: diff)
+        return SurfaceCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "flag.checkered")
+                        .font(.footnote.weight(.bold))
+                        .foregroundStyle(band.tint)
+                    Text("Your Round \(round) Result")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    StatusPillView(
+                        title: diff == 0 ? "Perfect!" : (diff < 1 ? "Close" : (diff <= 2 ? "Okay" : "Far")),
+                        systemImage: diff == 0 ? "target" : "scope",
+                        tint: band.tint
+                    )
+                }
+                HStack(spacing: 10) {
+                    resultMetric(label: "Target", value: formatSec(target), tint: .secondary)
+                    resultMetric(label: "Stopped", value: formatSec(actual), tint: .primary)
+                    resultMetric(label: "Diff", value: formatDiff(diff), tint: band.tint)
+                }
+            }
+        }
+    }
+
+    private func resultMetric(label: String, value: String, tint: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.title3.weight(.heavy))
+                .monospacedDigit()
+                .foregroundStyle(tint)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(.white.opacity(0.04), in: .rect(cornerRadius: 14))
+        .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(.white.opacity(0.05)) }
     }
 
     private func multiScoreTableCard(gts: GuessTheSecondsGameState, players: [PlayerProfile]) -> some View {
