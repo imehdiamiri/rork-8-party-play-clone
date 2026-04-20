@@ -195,13 +195,10 @@ struct HomeView: View {
             selectedLibraryTab = .playable
         }
         .sheet(isPresented: $showJoinSheet) {
-            QuickJoinSheet(appModel: appModel) { room in
-                showJoinSheet = false
-                path.append(.lobby(room))
-            }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationContentInteraction(.scrolls)
+            QuickJoinSheet(appModel: appModel)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationContentInteraction(.scrolls)
         }
     }
 
@@ -373,12 +370,12 @@ struct CompactLibraryTabGlassEffect: ViewModifier {
 
 struct QuickJoinSheet: View {
     let appModel: AppViewModel
-    let onJoined: (GameRoom) -> Void
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        CasualJoinRoomView(appModel: appModel) { casualVM in
-            dismiss()
+        NavigationStack {
+            CasualJoinRoomView(appModel: appModel)
+                .navigationTitle("Join Room")
+                .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
@@ -507,16 +504,14 @@ struct FriendsView: View {
         }
         .sheet(isPresented: $showJoinSheet) {
             NavigationStack {
-                CasualJoinRoomView(appModel: appModel) { vm in
-                    showJoinSheet = false
-                }
-                .navigationTitle("Join Room")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Cancel") { showJoinSheet = false }
+                CasualJoinRoomView(appModel: appModel)
+                    .navigationTitle("Join Room")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Cancel") { showJoinSheet = false }
+                        }
                     }
-                }
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)

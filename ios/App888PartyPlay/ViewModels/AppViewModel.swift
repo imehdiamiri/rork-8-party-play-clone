@@ -77,6 +77,7 @@ final class AppViewModel {
     var currentUserID: UUID?
     var currentProfileID: UUID?
     var activeSessionRecordID: UUID?
+    var sessionOverridePlayerID: UUID?
 
     var connectionState: SessionResilienceService.ConnectionState = .connected
     var showHostLeftAlert: Bool = false
@@ -85,7 +86,16 @@ final class AppViewModel {
     var syncErrorMessage: String?
 
     var sessionPlayerID: UUID? {
-        currentProfileID ?? currentUserID
+        if let sessionOverridePlayerID {
+            if let activeSession {
+                if activeSession.players.contains(where: { $0.id == sessionOverridePlayerID }) {
+                    return sessionOverridePlayerID
+                }
+            } else {
+                return sessionOverridePlayerID
+            }
+        }
+        return currentProfileID ?? currentUserID
     }
 
     private var currentPlayerID: UUID? {
@@ -599,7 +609,8 @@ final class AppViewModel {
 
     // MARK: - Casual Multiplayer
 
-    func startCasualMultiplayerSession(game: GameType, players: [PlayerProfile], roomCode: String) {
+    func startCasualMultiplayerSession(game: GameType, players: [PlayerProfile], roomCode: String, localPlayerID: UUID?) {
+        sessionOverridePlayerID = localPlayerID
         startSession(game: game, mode: .multiDevice, players: players, roomCode: roomCode)
     }
 
@@ -687,6 +698,7 @@ final class AppViewModel {
         timerTask = nil
         activeSession = nil
         activeSessionRecordID = nil
+        sessionOverridePlayerID = nil
         resilienceService.clearActiveSession()
     }
 
@@ -2143,6 +2155,7 @@ final class AppViewModel {
         currentProvider = .guest
         currentUserID = nil
         currentProfileID = nil
+        sessionOverridePlayerID = nil
         currentRoom = nil
         quickRejoinRoom = nil
         activeSession = nil

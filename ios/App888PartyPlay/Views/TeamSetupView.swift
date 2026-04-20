@@ -392,7 +392,8 @@ struct TeamSetupView: View {
         appModel.startCasualMultiplayerSession(
             game: room.gameType,
             players: players,
-            roomCode: room.code
+            roomCode: room.code,
+            localPlayerID: casualVM.localPlayer?.id
         )
     }
 }

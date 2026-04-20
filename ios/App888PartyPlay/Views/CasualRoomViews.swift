@@ -212,6 +212,9 @@ struct CasualJoinRoomView: View {
             .padding(.horizontal, 24)
             .padding(.top, 8)
         }
+        .navigationDestination(isPresented: $navigateToLobby) {
+            CasualLobbyView(appModel: appModel, casualVM: casualVM)
+        }
         .onChange(of: casualVM.isConnected) { _, connected in
             if connected {
                 navigateToLobby = true
@@ -506,7 +509,8 @@ struct CasualLobbyView: View {
         appModel.startCasualMultiplayerSession(
             game: room.gameType,
             players: players,
-            roomCode: room.code
+            roomCode: room.code,
+            localPlayerID: casualVM.localPlayer?.id
         )
     }
 }
