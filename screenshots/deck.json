@@ -1,0 +1,46 @@
+{
+  "theme": {
+    "style": "Nightclub-dark party world anchored in deep black-purple shadows that explode with saturated neon energy bursts. Each slide pulses with its own signature accent — molten orange, electric magenta, icy cyan, liquid gold — unified by the same dramatic stage-lit foundation. Lighting is volumetric and cinematic: sharp glowing cores, rim-lit edges, and fine suspended particles. Textures range from molten metal arcs to frosted geometric shards, keeping the mood bold, celebratory, and premium.",
+    "headlineFont": "font-family: 'Plus Jakarta Sans', sans-serif; @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@800&display=swap')",
+    "headlineFontSize": 120,
+    "mockupIds": {
+      "iphone": "cosmic-orange",
+      "ipad": "space-gray"
+    },
+    "palette": {
+      "primary": "#0E0B1A",
+      "secondary": "#FF5C1A",
+      "accent": "#FF1A6E"
+    }
+  },
+  "slides": [
+    {
+      "label": "Dice Roller",
+      "backgroundPrompt": "Abstract 3D rendered environment with explosive angular shards and jagged geometric fragments erupting from the lower-center against a near-black deep charcoal background with dark purple undertones. Molten orange and ember-red arcs of light slash diagonally across the frame, with dramatic rim lighting from below casting vivid burnt orange and amber glows that bleed into surrounding darkness, fine suspended particles catching warm firelight. The upper 30% fades to near-black calm for text overlay readability. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups.",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/29fbe68a-032f-4c78-b32e-e098d66b6a58.png"
+    },
+    {
+      "label": "Bottle Spinner",
+      "backgroundPrompt": "Abstract digital art of sweeping spiral silk ribbons in electric magenta, hot pink, and deep crimson swirling in a centrifugal vortex rising from the lower-right of the frame, set against a near-black background with deep violet undertones. A soft volumetric light bloom at the spiral core radiates vivid pink-magenta illumination outward in smooth arcs, with translucent layered streaks and frosted glass shards adding dimensional depth. The upper 30% of the frame is dark and deeply shadowed for unobstructed text. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups.",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/1fe4a8d8-4d05-48e3-90e5-da0862a18395.png"
+    },
+    {
+      "label": "Hourglass Timer",
+      "backgroundPrompt": "Abstract digital art of aurora-style flowing light waves in electric cyan, icy teal, and cold aquamarine washing horizontally across a near-black midnight background with deep indigo undertones. Soft volumetric light pools emanate from the left-center, creating luminous cyan halos that dissolve into deep space, with layered translucent frosted-glass planes catching cool turquoise reflections and subtle fine-grain texture. The upper 30% is deeply shadowed and uncluttered for text overlay readability. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups.",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/5830d72c-d2ff-43aa-8ad2-430fdf0eeaea.png"
+    },
+    {
+      "label": "Coin Flip",
+      "backgroundPrompt": "Abstract 3D rendered environment of flowing liquid gold and burnished copper arcs sweeping upward from the bottom-left across a near-black charcoal background, with smooth molten metallic waves and suspended fine gold-dust particles catching dramatic warm light from below. Rich amber and golden-yellow volumetric light beams cut upward through the composition, creating deep shadows behind each metallic arc and a luminous warm core in the lower frame. The upper 30% fades to dark charcoal for calm text overlay. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups.",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/ab8fecba-be30-4851-aead-870e37dba9e6.png"
+    }
+  ],
+  "headlines": {
+    "en": {
+      "Dice Roller": "Roll The Dice",
+      "Bottle Spinner": "Spin The Bottle",
+      "Hourglass Timer": "Time's Up",
+      "Coin Flip": "Flip A Coin"
+    }
+  }
+}
