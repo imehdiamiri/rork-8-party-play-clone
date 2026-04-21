@@ -208,6 +208,8 @@ nonisolated struct CasualRoomStatePayload: Codable, Hashable, Sendable {
     let settingsAnswerTime: Int
     let settingsVoteTime: Int
     let settingsQuestionPack: String
+    let playMode: String
+    let teamState: TeamState?
 
     init(from room: CasualRoom) {
         self.roomId = room.id.uuidString
@@ -222,6 +224,8 @@ nonisolated struct CasualRoomStatePayload: Codable, Hashable, Sendable {
         self.settingsAnswerTime = room.settings.answerTime
         self.settingsVoteTime = room.settings.voteTime
         self.settingsQuestionPack = room.settings.questionPack.rawValue
+        self.playMode = room.playMode.rawValue
+        self.teamState = room.teamState
     }
 
     func toCasualRoom() -> CasualRoom? {
@@ -234,6 +238,7 @@ nonisolated struct CasualRoomStatePayload: Codable, Hashable, Sendable {
             voteTime: settingsVoteTime,
             questionPack: FakeAnswerQuestionPack(rawValue: settingsQuestionPack) ?? .random
         )
+        let resolvedPlayMode = GameMode(rawValue: playMode) ?? .multiDevice
         return CasualRoom(
             id: uuid,
             code: code,
@@ -243,7 +248,9 @@ nonisolated struct CasualRoomStatePayload: Codable, Hashable, Sendable {
             maxPlayers: maxPlayers,
             minPlayers: minPlayers,
             createdAt: Date(timeIntervalSince1970: createdAt),
-            settings: settings
+            settings: settings,
+            playMode: resolvedPlayMode,
+            teamState: resolvedPlayMode == .teamMode ? teamState : nil
         )
     }
 }

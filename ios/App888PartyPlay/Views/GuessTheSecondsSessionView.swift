@@ -55,6 +55,14 @@ struct GuessTheSecondsSessionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 headerCard
+                if let latestTurn = viewModel.latestTurn {
+                    lastResultBanner(
+                        title: "\(latestTurn.playerName) • Round \(latestTurn.round)",
+                        target: latestTurn.targetTime,
+                        actual: latestTurn.actualTime,
+                        diff: latestTurn.difference
+                    )
+                }
                 controlCard
                 scoreTableCard
                 if viewModel.isFinished {
@@ -104,15 +112,16 @@ struct GuessTheSecondsSessionView: View {
                         }
                     }
 
+                    if let latestTurn = gts.turnResults.last {
+                        lastResultBanner(
+                            title: "\(latestTurn.playerName) • Round \(latestTurn.round)",
+                            target: latestTurn.targetTime,
+                            actual: latestTurn.actualTime,
+                            diff: latestTurn.difference
+                        )
+                    }
+
                     if !gts.isFinished {
-                        if multiLastActual > 0 && !multiIsRunning {
-                            lastResultBanner(
-                                target: multiLastTarget,
-                                actual: multiLastActual,
-                                diff: multiLastDiff,
-                                round: multiLastRound
-                            )
-                        }
                         SurfaceCard {
                             VStack(alignment: .leading, spacing: 18) {
                                 if isMyTurn {
@@ -235,7 +244,7 @@ struct GuessTheSecondsSessionView: View {
         appModel.submitGTSTurnResult(actualTime: actualTime)
     }
 
-    private func lastResultBanner(target: Double, actual: Double, diff: Double, round: Int) -> some View {
+    private func lastResultBanner(title: String, target: Double, actual: Double, diff: Double) -> some View {
         let band = GuessTheSecondsSessionViewModel.AccuracyBand(difference: diff)
         return SurfaceCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -243,7 +252,7 @@ struct GuessTheSecondsSessionView: View {
                     Image(systemName: "flag.checkered")
                         .font(.footnote.weight(.bold))
                         .foregroundStyle(band.tint)
-                    Text("Your Round \(round) Result")
+                    Text(title)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Spacer(minLength: 0)

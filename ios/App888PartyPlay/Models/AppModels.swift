@@ -1448,7 +1448,7 @@ nonisolated enum LobbyRoute: Hashable, Sendable {
     case room(GameRoom)
 }
 
-nonisolated struct TeamAssignment: Identifiable, Hashable, Sendable {
+nonisolated struct TeamAssignment: Identifiable, Hashable, Codable, Sendable {
     let id: String
     let name: String
     let playerIDs: [UUID]
@@ -1476,7 +1476,7 @@ nonisolated struct TeamAssignment: Identifiable, Hashable, Sendable {
     }
 }
 
-nonisolated struct TeamState: Hashable, Sendable {
+nonisolated struct TeamState: Hashable, Codable, Sendable {
     let teams: [TeamAssignment]
 
     init(teams: [TeamAssignment] = [TeamAssignment(id: "team_a", name: "Team A"), TeamAssignment(id: "team_b", name: "Team B")]) {

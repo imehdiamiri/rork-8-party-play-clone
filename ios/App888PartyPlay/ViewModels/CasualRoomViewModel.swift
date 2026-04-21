@@ -193,6 +193,9 @@ final class CasualRoomViewModel {
             do {
                 let joined = try await roomService.joinRoom(code: trimmedCode, player: player)
                 room = joined
+                playMode = joined.playMode
+                teamState = joined.teamState ?? .default
+                gameStarted = joined.status == .starting || joined.status == .inProgress
                 isConnected = true
                 GuestSessionStore.save(playerID: playerID, sessionToken: token, displayName: trimmedName, roomID: joined.id)
                 setupCallbacks()
@@ -404,6 +407,8 @@ final class CasualRoomViewModel {
         roomService.onGameStarting = { [weak self] room in
             guard let self else { return }
             self.room = room
+            self.playMode = room.playMode
+            self.teamState = room.teamState ?? .default
             self.gameStarted = true
         }
 
@@ -460,6 +465,8 @@ final class CasualRoomViewModel {
                 voteTime: roomRecord.settingsVoteTime,
                 questionPack: FakeAnswerQuestionPack(rawValue: roomRecord.settingsQuestionPack) ?? .random
             )
+            let resolvedPlayMode = currentRoom.playMode
+            let resolvedTeamState = resolvedPlayMode == .teamMode ? (currentRoom.teamState ?? teamState) : nil
             room = CasualRoom(
                 id: roomRecord.id,
                 code: roomRecord.roomCode,
@@ -470,9 +477,12 @@ final class CasualRoomViewModel {
                 minPlayers: roomRecord.minPlayers,
                 createdAt: roomRecord.createdAt ?? Date(),
                 settings: settings,
-                playMode: playMode,
-                teamState: playMode == .teamMode ? teamState : nil
+                playMode: resolvedPlayMode,
+                teamState: resolvedTeamState
             )
+            playMode = resolvedPlayMode
+            teamState = resolvedTeamState ?? .default
+            gameStarted = status == .starting || status == .inProgress
         } catch {
             errorMessage = "Connection lost. Reconnecting…"
         }

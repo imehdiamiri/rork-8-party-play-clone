@@ -391,6 +391,7 @@ struct TeamSetupView: View {
         appModel.currentFakeAnswerSettings = casualVM.fakeAnswerSettings
         appModel.startCasualMultiplayerSession(
             game: room.gameType,
+            mode: room.playMode,
             players: players,
             roomCode: room.code,
             localPlayerID: casualVM.localPlayer?.id

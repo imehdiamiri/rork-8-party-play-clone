@@ -21,6 +21,8 @@ struct CasualCreateRoomView: View {
                 .padding(.bottom, 28)
             }
         }
+        .scrollDismissesKeyboard(.immediately)
+        .dismissKeyboardOnTap()
         .navigationTitle("\(game.name) — Setup")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
@@ -110,115 +112,161 @@ struct CasualJoinRoomView: View {
     let onJoinedAndStarted: ((CasualRoomViewModel) -> Void)?
     @State private var casualVM = CasualRoomViewModel()
     @State private var navigateToLobby: Bool = false
+    @FocusState private var focusedField: JoinField?
     @Environment(\.dismiss) private var dismiss
+
+    nonisolated enum JoinField: Hashable, Sendable {
+        case code
+        case name
+    }
 
     init(appModel: AppViewModel, onJoinedAndStarted: ((CasualRoomViewModel) -> Void)? = nil) {
         self.appModel = appModel
         self.onJoinedAndStarted = onJoinedAndStarted
     }
 
+    private var isJoinDisabled: Bool {
+        casualVM.isBusy
+            || casualVM.roomCode.trimmingCharacters(in: .whitespacesAndNewlines).count < 4
+            || casualVM.displayName.trimmingCharacters(in: .whitespacesAndNewlines).count < 2
+    }
+
     var body: some View {
         ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
-            VStack(spacing: 24) {
-                VStack(spacing: 10) {
-                    Image(systemName: "number.square.fill")
-                        .font(.system(size: 36, weight: .semibold))
-                        .foregroundStyle(.blue)
-
-                    Text("Join a Room")
-                        .font(.title3.weight(.bold))
-
-                    Text("Enter the room code and your name.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-
-                    Label("Ask your friend for a code", systemImage: "lightbulb.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.yellow)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(.yellow.opacity(0.12), in: .capsule)
-                        .overlay { Capsule().strokeBorder(.yellow.opacity(0.25)) }
-                }
-
-                VStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        TextField("Room code", text: $casualVM.roomCode)
-                            .keyboardType(.numberPad)
-                            .autocorrectionDisabled()
-                            .font(.title3.weight(.semibold))
-                            .multilineTextAlignment(.center)
-                            .padding(.vertical, 14)
-                            .background(.secondary.opacity(0.12), in: .rect(cornerRadius: 14))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 14)
-                                    .strokeBorder(.secondary.opacity(0.2))
+            AppBackgroundView()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    SurfaceCard {
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack(alignment: .top, spacing: 14) {
+                                Image(systemName: "number.square.fill")
+                                    .font(.system(size: 32, weight: .semibold))
+                                    .foregroundStyle(.blue)
+                                    .frame(width: 58, height: 58)
+                                    .background(.blue.opacity(0.14), in: .rect(cornerRadius: 18))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Join with Code")
+                                        .font(.title3.weight(.bold))
+                                    Text("Type the room code and your name. If the host starts right away, the game opens automatically on your phone.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 0)
                             }
-                        if casualVM.roomCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            Text("Room code is required")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.leading, 4)
+
+                            HStack(spacing: 8) {
+                                StatusPillView(title: "Fast Join", systemImage: "bolt.fill", tint: .blue)
+                                StatusPillView(title: "Live Sync", systemImage: "dot.radiowaves.up.forward", tint: .green)
+                            }
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        TextField("Your name", text: $casualVM.displayName)
-                            .textInputAutocapitalization(.words)
-                            .autocorrectionDisabled()
-                            .font(.body.weight(.medium))
-                            .multilineTextAlignment(.center)
-                            .padding(.vertical, 14)
-                            .background(.secondary.opacity(0.12), in: .rect(cornerRadius: 14))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 14)
-                                    .strokeBorder(.secondary.opacity(0.2))
+                    SurfaceCard {
+                        VStack(alignment: .leading, spacing: 16) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Room Code")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                TextField("123456", text: $casualVM.roomCode)
+                                    .keyboardType(.numberPad)
+                                    .textContentType(.oneTimeCode)
+                                    .focused($focusedField, equals: .code)
+                                    .font(.system(size: 28, weight: .heavy, design: .monospaced))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.vertical, 16)
+                                    .background(.white.opacity(0.05), in: .rect(cornerRadius: 16))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .strokeBorder(.white.opacity(0.08))
+                                    }
+                                Text("Ask your friend for the 6-digit code.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
-                        if casualVM.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            Text("Display name is required")
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Your Name")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                TextField("Enter your name", text: $casualVM.displayName)
+                                    .textInputAutocapitalization(.words)
+                                    .autocorrectionDisabled()
+                                    .focused($focusedField, equals: .name)
+                                    .submitLabel(.go)
+                                    .onSubmit {
+                                        if !isJoinDisabled {
+                                            focusedField = nil
+                                            casualVM.joinRoom()
+                                        }
+                                    }
+                                    .font(.body.weight(.medium))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.vertical, 16)
+                                    .background(.white.opacity(0.05), in: .rect(cornerRadius: 16))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .strokeBorder(.white.opacity(0.08))
+                                    }
+                                Text("Everyone in the room sees this name.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
+                    VStack(spacing: 10) {
+                        Button {
+                            focusedField = nil
+                            casualVM.joinRoom()
+                        } label: {
+                            Label("Join Room", systemImage: "arrow.right.circle.fill")
+                        }
+                        .buttonStyle(PrimaryActionButtonStyle())
+                        .disabled(isJoinDisabled)
+
+                        if let error = casualVM.errorMessage {
+                            Text(error)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.leading, 4)
+                                .foregroundStyle(.red)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        if casualVM.isBusy {
+                            ProgressView()
+                                .tint(.white)
                         }
                     }
                 }
-
-                VStack(spacing: 8) {
-                    Button("Join Room") {
-                        casualVM.joinRoom()
-                    }
-                    .buttonStyle(PrimaryActionButtonStyle())
-                    .disabled(
-                        casualVM.isBusy ||
-                        casualVM.roomCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                        casualVM.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    )
-
-                    if let error = casualVM.errorMessage {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    if casualVM.isBusy {
-                        ProgressView()
-                            .tint(.white)
-                    }
-                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 32)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 8)
+            .scrollDismissesKeyboard(.immediately)
         }
+        .dismissKeyboardOnTap()
         .navigationDestination(isPresented: $navigateToLobby) {
             CasualLobbyView(appModel: appModel, casualVM: casualVM)
+        }
+        .onChange(of: casualVM.roomCode) { _, newValue in
+            let sanitized = String(newValue.filter(\.isNumber).prefix(6))
+            if sanitized != newValue {
+                casualVM.roomCode = sanitized
+            }
+            if sanitized.count >= 6 && focusedField == .code {
+                focusedField = .name
+            }
         }
         .onChange(of: casualVM.isConnected) { _, connected in
             if connected {
                 navigateToLobby = true
                 onJoinedAndStarted?(casualVM)
+            }
+        }
+        .task {
+            if casualVM.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                focusedField = .code
+            } else {
+                focusedField = .name
             }
         }
         .alert("Kicked", isPresented: $casualVM.wasKicked) {
@@ -295,10 +343,9 @@ struct CasualLobbyView: View {
         } message: {
             Text("The host left the game. You've been returned to the main lobby.")
         }
-        .onChange(of: casualVM.gameStarted) { _, started in
-            if started {
-                startGameSession()
-            }
+        .task(id: casualVM.gameStarted) {
+            guard casualVM.gameStarted else { return }
+            startGameSession()
         }
         .onChange(of: scenePhase) { _, newPhase in
             casualVM.handleScenePhaseChange(to: newPhase)
@@ -506,8 +553,10 @@ struct CasualLobbyView: View {
     private func startGameSession() {
         guard let room = casualVM.room else { return }
         let players = casualVM.buildPlayersForSession()
+        guard appModel.activeSession?.roomCode != room.code else { return }
         appModel.startCasualMultiplayerSession(
             game: room.gameType,
+            mode: room.playMode,
             players: players,
             roomCode: room.code,
             localPlayerID: casualVM.localPlayer?.id

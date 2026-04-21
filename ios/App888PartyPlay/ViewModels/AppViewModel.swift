@@ -427,30 +427,39 @@ final class AppViewModel {
         currentRoom = nil
         quickRejoinRoom = nil
         selectedTab = .home
+        showRejoinPrompt = false
+        pendingRejoinSessionID = nil
+        syncErrorMessage = nil
+        isBusy = false
+        isCheckingSession = false
+        isAuthenticated = false
+        username = "Guest"
+        displayName = "Guest"
+        email = nil
+        publicUserID = nil
+        avatarSymbol = "person.crop.circle.fill"
+        profileImageData = nil
+        currentProvider = .guest
+        currentUserID = nil
+        currentProfileID = nil
+        friends = []
+        requests = []
+        activities = []
+        friendSearchResults = []
+        roomInvites = []
+        visibleRooms = []
+        lobbyNotice = nil
+        errorMessage = nil
+        economyFeedback = nil
+        starWallet = StarWallet(balance: 100)
+        subscription = .none
+        gameUnlocks = []
         Task {
             try? await authService.signOut()
             await realtimeService.unsubscribeFromRoom()
             await realtimeService.unsubscribeFromSocialUpdates()
             await realtimeService.untrackPresence()
             resilienceService.clearActiveSession()
-            isAuthenticated = false
-            username = "Guest"
-            displayName = "Guest"
-            email = nil
-            publicUserID = nil
-            avatarSymbol = "person.crop.circle.fill"
-            profileImageData = nil
-            currentProvider = .guest
-            currentUserID = nil
-            currentProfileID = nil
-            friends = []
-            requests = []
-            friendSearchResults = []
-            roomInvites = []
-            visibleRooms = []
-            starWallet = StarWallet(balance: 100)
-            subscription = .none
-            gameUnlocks = []
         }
     }
 
@@ -634,9 +643,9 @@ final class AppViewModel {
 
     // MARK: - Casual Multiplayer
 
-    func startCasualMultiplayerSession(game: GameType, players: [PlayerProfile], roomCode: String, localPlayerID: UUID?) {
+    func startCasualMultiplayerSession(game: GameType, mode: GameMode, players: [PlayerProfile], roomCode: String, localPlayerID: UUID?) {
         sessionOverridePlayerID = localPlayerID
-        startSession(game: game, mode: .multiDevice, players: players, roomCode: roomCode)
+        startSession(game: game, mode: mode, players: players, roomCode: roomCode)
     }
 
     // MARK: - Multiplayer Start

@@ -25,6 +25,7 @@ struct OnboardingView: View {
                     .padding(.bottom, 48)
             }
         }
+        .dismissKeyboardOnTap()
         .onAppear {
             withAnimation(.spring(response: 0.6).delay(0.15)) {
                 appeared = true

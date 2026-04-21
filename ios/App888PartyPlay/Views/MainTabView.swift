@@ -515,6 +515,7 @@ struct FriendsView: View {
             .padding(.bottom, 96)
         }
         .scrollDismissesKeyboard(.interactively)
+        .dismissKeyboardOnTap()
         .onChange(of: searchText) { _, newValue in
             appModel.searchFriends(query: newValue)
         }
@@ -1417,6 +1418,7 @@ struct ProfileView: View {
                 }
             }
         }
+        .dismissKeyboardOnTap()
         .onAppear {
             username = appModel.username
             Task { await checkAdminStatus() }

@@ -6,7 +6,13 @@ struct AuthView: View {
     @State private var isLogin: Bool = true
     @State private var username: String = ""
     @State private var password: String = ""
+    @FocusState private var focusedField: AuthField?
     @Environment(\.dismiss) private var dismiss
+
+    nonisolated enum AuthField: Hashable, Sendable {
+        case username
+        case password
+    }
 
     var body: some View {
         NavigationStack {
@@ -57,6 +63,11 @@ struct AuthView: View {
                                 .textInputAutocapitalization(.never)
                                 .textContentType(.username)
                                 .autocorrectionDisabled()
+                                .focused($focusedField, equals: .username)
+                                .submitLabel(.next)
+                                .onSubmit {
+                                    focusedField = .password
+                                }
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 14)
                                 .background(.white.opacity(0.06), in: .rect(cornerRadius: 14))
@@ -67,6 +78,11 @@ struct AuthView: View {
 
                             SecureField("Password", text: $password)
                                 .textContentType(isLogin ? .password : .newPassword)
+                                .focused($focusedField, equals: .password)
+                                .submitLabel(.go)
+                                .onSubmit {
+                                    submitAuth()
+                                }
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 14)
                                 .background(.white.opacity(0.06), in: .rect(cornerRadius: 14))
@@ -78,11 +94,7 @@ struct AuthView: View {
 
                         VStack(spacing: 10) {
                             Button(isLogin ? "Login" : "Create Account") {
-                                if isLogin {
-                                    appModel.signIn(username: username, password: password)
-                                } else {
-                                    appModel.signUp(username: username, password: password)
-                                }
+                                submitAuth()
                             }
                             .buttonStyle(PrimaryActionButtonStyle())
                             .disabled(username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || appModel.isBusy)
@@ -182,9 +194,13 @@ struct AuthView: View {
             .navigationBarHidden(true)
         }
         .preferredColorScheme(.dark)
+        .dismissKeyboardOnTap()
         .onChange(of: appModel.currentProvider) { _, newValue in
-            if newValue != .guest, showCloseButton {
-                dismiss()
+            if newValue != .guest {
+                focusedField = nil
+                if showCloseButton {
+                    dismiss()
+                }
             }
         }
         .overlay {
@@ -198,6 +214,18 @@ struct AuthView: View {
                         .background(.ultraThinMaterial, in: .rect(cornerRadius: 20))
                 }
             }
+        }
+    }
+
+    private func submitAuth() {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedUsername.isEmpty, !trimmedPassword.isEmpty, !appModel.isBusy else { return }
+        focusedField = nil
+        if isLogin {
+            appModel.signIn(username: trimmedUsername, password: trimmedPassword)
+        } else {
+            appModel.signUp(username: trimmedUsername, password: trimmedPassword)
         }
     }
 }

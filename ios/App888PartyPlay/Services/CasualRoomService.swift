@@ -337,6 +337,7 @@ final class CasualRoomService {
         try await updateRoomStatus(roomID: room.id, status: .starting, hostSessionToken: hostSessionToken)
         let payload = CasualRoomStatePayload(from: room)
         try? await channel?.broadcast(event: CasualBroadcastEvent.gameStarting.rawValue, message: payload)
+        await notifyRoomUpdate()
     }
 
     func broadcastGameStarting(_ room: CasualRoom) async {
@@ -408,7 +409,7 @@ final class CasualRoomService {
         let refreshStream = ch.broadcastStream(event: CasualBroadcastEvent.roomStateSync.rawValue)
         let hostStream = ch.broadcastStream(event: CasualBroadcastEvent.hostChanged.rawValue)
 
-        await ch.subscribe()
+        try await ch.subscribeWithError()
 
         broadcastTask = Task { [weak self] in
             await withTaskGroup(of: Void.self) { group in
