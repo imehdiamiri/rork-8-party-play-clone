@@ -505,7 +505,7 @@ struct TeamSplitterToolView: View {
                             .padding(.top, 4)
                     }
                 }
-                .scrollDismissesKeyboard(.interactively)
+                .scrollDismissesKeyboard(.immediately)
 
                 splitButton
                     .padding(.horizontal, 20)

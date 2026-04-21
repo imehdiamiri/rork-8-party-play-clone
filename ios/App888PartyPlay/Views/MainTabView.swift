@@ -514,7 +514,7 @@ struct FriendsView: View {
             .padding(.top, 6)
             .padding(.bottom, 96)
         }
-        .scrollDismissesKeyboard(.interactively)
+        .scrollDismissesKeyboard(.immediately)
         .dismissKeyboardOnTap()
         .onChange(of: searchText) { _, newValue in
             appModel.searchFriends(query: newValue)

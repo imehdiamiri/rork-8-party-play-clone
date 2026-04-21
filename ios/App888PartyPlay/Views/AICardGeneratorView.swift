@@ -195,8 +195,9 @@ struct AICardGeneratorView: View {
                 .padding(.top, 4)
                 .padding(.bottom, 28)
             }
-            .scrollDismissesKeyboard(.interactively)
+            .scrollDismissesKeyboard(.immediately)
         }
+        .dismissKeyboardOnTap()
         .toolbar(.hidden, for: .navigationBar)
         .onChange(of: vm.category) { _, _ in
             vm.ensureSubtypeIsValid()
