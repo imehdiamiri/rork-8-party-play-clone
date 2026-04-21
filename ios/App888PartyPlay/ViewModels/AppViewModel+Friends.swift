@@ -43,6 +43,7 @@ extension AppViewModel {
 
     func searchFriends(query: String) {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        latestFriendSearchQuery = trimmed
         guard !trimmed.isEmpty else {
             friendSearchResults = []
             isSearchingFriends = false
@@ -58,9 +59,11 @@ extension AppViewModel {
         Task {
             do {
                 let results = try await databaseService.searchProfiles(query: trimmed, currentUserID: currentUserID)
+                guard latestFriendSearchQuery == trimmed else { return }
                 friendSearchResults = results
                 isSearchingFriends = false
             } catch {
+                guard latestFriendSearchQuery == trimmed else { return }
                 friendSearchResults = []
                 isSearchingFriends = false
                 errorMessage = error.localizedDescription

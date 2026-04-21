@@ -41,6 +41,7 @@ final class AppViewModel {
         didSet { persistOfflineFriends() }
     }
     var friendSearchResults: [FriendSearchResult]
+    var latestFriendSearchQuery: String = ""
     var roomInvites: [RoomInvite]
     var visibleRooms: [GameRoom]
     var currentRoom: GameRoom?
@@ -152,9 +153,11 @@ final class AppViewModel {
 
         authService.startAuthListener { [weak self] session in
             guard let self else { return }
-            if let session {
-                Task {
+            Task { @MainActor in
+                if let session {
                     await self.handleAuthenticatedSession(session)
+                } else if self.currentUserID != nil || self.currentProvider != .guest {
+                    self.applySignedOutState()
                 }
             }
         }
@@ -407,11 +410,8 @@ final class AppViewModel {
             defer { isBusy = false }
             do {
                 try await databaseService.deleteAccountData()
-                try await authService.signOut()
-                await realtimeService.unsubscribeFromRoom()
-                await realtimeService.unsubscribeFromSocialUpdates()
-                await realtimeService.untrackPresence()
-                applyGuestState()
+                try? await authService.signOut()
+                applySignedOutState()
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -419,46 +419,12 @@ final class AppViewModel {
     }
 
     func logout() {
-        timerTask?.cancel()
-        timerTask = nil
-        activeSession = nil
-        activeSessionRecordID = nil
-        sessionOverridePlayerID = nil
-        currentRoom = nil
-        quickRejoinRoom = nil
-        selectedTab = .home
-        showRejoinPrompt = false
-        pendingRejoinSessionID = nil
-        syncErrorMessage = nil
-        isBusy = false
-        isCheckingSession = false
-        isAuthenticated = false
-        username = "Guest"
-        displayName = "Guest"
-        email = nil
-        publicUserID = nil
-        avatarSymbol = "person.crop.circle.fill"
-        profileImageData = nil
-        currentProvider = .guest
-        currentUserID = nil
-        currentProfileID = nil
-        friends = []
-        requests = []
-        activities = []
-        friendSearchResults = []
-        roomInvites = []
-        visibleRooms = []
-        lobbyNotice = nil
-        errorMessage = nil
-        economyFeedback = nil
-        starWallet = StarWallet(balance: 100)
-        subscription = .none
-        gameUnlocks = []
+        let shouldSignOutRemotely = currentProvider != .guest || currentUserID != nil
+        applySignedOutState()
         Task {
-            try? await authService.signOut()
-            await realtimeService.unsubscribeFromRoom()
-            await realtimeService.unsubscribeFromSocialUpdates()
-            await realtimeService.untrackPresence()
+            if shouldSignOutRemotely {
+                try? await authService.signOut()
+            }
             resilienceService.clearActiveSession()
         }
     }
@@ -2175,11 +2141,20 @@ final class AppViewModel {
         updateSession(session)
     }
 
+    private func applySignedOutState() {
+        applyGuestState()
+        isAuthenticated = false
+    }
+
     private func applyGuestState() {
         Task {
+            await realtimeService.unsubscribeFromRoom()
             await realtimeService.unsubscribeFromSocialUpdates()
             await realtimeService.untrackPresence()
         }
+        timerTask?.cancel()
+        timerTask = nil
+        selectedTab = .home
         isAuthenticated = true
         username = "Guest"
         displayName = "Guest"
@@ -2195,6 +2170,10 @@ final class AppViewModel {
         activeSession = nil
         activeSessionRecordID = nil
         isApplyingRemoteSessionState = false
+        showHostLeftAlert = false
+        showRejoinPrompt = false
+        pendingRejoinSessionID = nil
+        syncErrorMessage = nil
         currentRoomAccess = .privateRoom
         invitedOnlineFriendIDs = []
         friends = []
@@ -2216,6 +2195,9 @@ final class AppViewModel {
         currentMemoryGridSettings = nil
         currentMemoryPathSettings = nil
         currentPassGuessSettings = .default
+        currentTapInOrderSettings = nil
+        currentColorTrapSettings = nil
+        currentSpinBottleDifficulty = .classic
         gameUnlocks = []
         games = [
             GameDefinition(id: .reverseSinging, accentName: "purple"),
@@ -2244,8 +2226,13 @@ final class AppViewModel {
         errorMessage = nil
         economyFeedback = nil
         lobbyNotice = nil
+        onlineUserIDs = []
+        latestFriendSearchQuery = ""
+        isBusy = false
+        isCheckingSession = false
         isSearchingFriends = false
         isProcessingWalletAction = false
+        resilienceService.clearActiveSession()
     }
 
     private func loadSettings() {
