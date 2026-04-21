@@ -130,11 +130,12 @@ final class MemoryGridViewModel {
 
     private func startTimer() {
         stopTimer()
-        timerTask = Task {
+        timerTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(100))
-                guard isGameActive else { return }
-                elapsedSeconds += 0.1
+                guard let self else { return }
+                guard self.isGameActive else { return }
+                self.elapsedSeconds += 0.1
             }
         }
     }
@@ -143,4 +144,5 @@ final class MemoryGridViewModel {
         timerTask?.cancel()
         timerTask = nil
     }
+
 }

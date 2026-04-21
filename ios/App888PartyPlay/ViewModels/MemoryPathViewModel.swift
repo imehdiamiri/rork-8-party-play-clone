@@ -621,11 +621,12 @@ final class MemoryPathViewModel {
     private func startTimer() {
         startTime = Date()
         timerTask?.cancel()
-        timerTask = Task {
+        timerTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(100))
-                guard let start = startTime else { continue }
-                elapsedTime = accumulatedTime + Date().timeIntervalSince(start)
+                guard let self else { return }
+                guard let start = self.startTime else { continue }
+                self.elapsedTime = self.accumulatedTime + Date().timeIntervalSince(start)
             }
         }
     }
@@ -638,4 +639,5 @@ final class MemoryPathViewModel {
         timerTask = nil
         startTime = nil
     }
+
 }
