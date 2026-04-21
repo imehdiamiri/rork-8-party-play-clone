@@ -35,6 +35,9 @@ struct ContentView: View {
         .animation(.smooth, value: appModel.hasCompletedOnboarding)
         .task {
             await NotificationService.shared.checkCurrentStatus()
+            if !NotificationService.shared.isAuthorized {
+                _ = await NotificationService.shared.requestPermission()
+            }
         }
         .onAppear {
             store.onStarsGranted = { amount, tier, periodKey, expiresAt in

@@ -65,30 +65,30 @@ final class SoundManager {
     }
 
     private func precacheBuffers() {
-        buffers["tileFlip"] = makeTone(freq: 880, duration: 0.06, volume: 0.25, waveform: .sine, attack: 0.002, release: 0.05)
-        buffers["match"] = makeChord(freqs: [523.25, 659.25, 783.99], duration: 0.35, volume: 0.3, waveform: .triangle)
-        buffers["mismatch"] = makeTone(freq: 220, duration: 0.22, volume: 0.22, waveform: .triangle, attack: 0.005, release: 0.18)
-        buffers["buttonTap"] = makeTone(freq: 1200, duration: 0.04, volume: 0.18, waveform: .sine, attack: 0.001, release: 0.035)
-        buffers["navigation"] = makeSweep(fromFreq: 600, toFreq: 900, duration: 0.12, volume: 0.22, waveform: .sine)
-        buffers["gameStart"] = makeArpeggio(freqs: [523.25, 659.25, 783.99, 1046.5], noteDuration: 0.08, volume: 0.32, waveform: .triangle)
-        buffers["roundStart"] = makeArpeggio(freqs: [659.25, 880], noteDuration: 0.1, volume: 0.3, waveform: .triangle)
-        buffers["roundEnd"] = makeArpeggio(freqs: [880, 659.25], noteDuration: 0.1, volume: 0.28, waveform: .triangle)
-        buffers["correct"] = makeChord(freqs: [659.25, 987.77], duration: 0.2, volume: 0.3, waveform: .sine)
-        buffers["wrong"] = makeSweep(fromFreq: 440, toFreq: 180, duration: 0.28, volume: 0.28, waveform: .sawtooth)
-        buffers["victory"] = makeArpeggio(freqs: [523.25, 659.25, 783.99, 1046.5, 1318.5], noteDuration: 0.09, volume: 0.36, waveform: .triangle)
-        buffers["defeat"] = makeArpeggio(freqs: [440, 392, 349.23, 293.66], noteDuration: 0.12, volume: 0.3, waveform: .sawtooth)
-        buffers["vote"] = makeTone(freq: 1000, duration: 0.05, volume: 0.2, waveform: .sine, attack: 0.001, release: 0.045)
-        buffers["reveal"] = makeSweep(fromFreq: 400, toFreq: 1200, duration: 0.4, volume: 0.32, waveform: .triangle)
-        buffers["timerTick"] = makeTone(freq: 1500, duration: 0.025, volume: 0.1, waveform: .sine, attack: 0.001, release: 0.022)
-        buffers["timerUrgent"] = makeTone(freq: 1800, duration: 0.08, volume: 0.28, waveform: .square, attack: 0.001, release: 0.07)
-        buffers["countdown"] = makeTone(freq: 880, duration: 0.12, volume: 0.3, waveform: .sine, attack: 0.002, release: 0.1)
-        buffers["passDevice"] = makeSweep(fromFreq: 500, toFreq: 800, duration: 0.18, volume: 0.24, waveform: .sine)
-        buffers["starEarned"] = makeArpeggio(freqs: [1318.5, 1567.98, 1975.53], noteDuration: 0.06, volume: 0.3, waveform: .sine)
-        buffers["bottleSpin"] = makeSweep(fromFreq: 1400, toFreq: 180, duration: 8.0, volume: 0.22, waveform: .triangle)
-        buffers["bottleLand"] = makeArpeggio(freqs: [1760, 1318.5, 987.77], noteDuration: 0.08, volume: 0.34, waveform: .sine)
-        buffers["playerPicked"] = makeChord(freqs: [523.25, 783.99, 1046.5], duration: 0.45, volume: 0.32, waveform: .triangle)
-        buffers["tabSwitch"] = makeArpeggio(freqs: [760, 1140], noteDuration: 0.055, volume: 0.22, waveform: .sine)
-        buffers["diceRoll"] = makeSweep(fromFreq: 320, toFreq: 180, duration: 0.9, volume: 0.22, waveform: .triangle)
+        buffers["tileFlip"] = makeTone(freq: 960, duration: 0.05, volume: 0.22, waveform: .sine, attack: 0.002, release: 0.045)
+        buffers["match"] = makeChord(freqs: [523.25, 659.25, 783.99, 1046.5], duration: 0.4, volume: 0.28, waveform: .sine)
+        buffers["mismatch"] = makeTone(freq: 200, duration: 0.2, volume: 0.2, waveform: .sine, attack: 0.005, release: 0.18)
+        buffers["buttonTap"] = makeTone(freq: 1400, duration: 0.035, volume: 0.14, waveform: .sine, attack: 0.001, release: 0.03)
+        buffers["navigation"] = makeSweep(fromFreq: 700, toFreq: 1100, duration: 0.1, volume: 0.18, waveform: .sine)
+        buffers["gameStart"] = makeArpeggio(freqs: [523.25, 659.25, 783.99, 1046.5, 1318.5], noteDuration: 0.07, volume: 0.3, waveform: .sine)
+        buffers["roundStart"] = makeArpeggio(freqs: [659.25, 880, 1174.66], noteDuration: 0.08, volume: 0.28, waveform: .sine)
+        buffers["roundEnd"] = makeArpeggio(freqs: [1174.66, 880, 659.25], noteDuration: 0.09, volume: 0.26, waveform: .sine)
+        buffers["correct"] = makeArpeggio(freqs: [659.25, 987.77, 1318.5], noteDuration: 0.075, volume: 0.28, waveform: .sine)
+        buffers["wrong"] = makeSweep(fromFreq: 520, toFreq: 160, duration: 0.3, volume: 0.24, waveform: .triangle)
+        buffers["victory"] = makeArpeggio(freqs: [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98], noteDuration: 0.085, volume: 0.34, waveform: .sine)
+        buffers["defeat"] = makeArpeggio(freqs: [523.25, 440, 349.23, 261.63], noteDuration: 0.13, volume: 0.28, waveform: .triangle)
+        buffers["vote"] = makeTone(freq: 1100, duration: 0.05, volume: 0.17, waveform: .sine, attack: 0.001, release: 0.045)
+        buffers["reveal"] = makeSweep(fromFreq: 330, toFreq: 1320, duration: 0.5, volume: 0.3, waveform: .sine)
+        buffers["timerTick"] = makeTone(freq: 1600, duration: 0.022, volume: 0.08, waveform: .sine, attack: 0.001, release: 0.02)
+        buffers["timerUrgent"] = makeTone(freq: 2000, duration: 0.07, volume: 0.22, waveform: .triangle, attack: 0.001, release: 0.065)
+        buffers["countdown"] = makeTone(freq: 988, duration: 0.11, volume: 0.26, waveform: .sine, attack: 0.002, release: 0.095)
+        buffers["passDevice"] = makeSweep(fromFreq: 440, toFreq: 880, duration: 0.22, volume: 0.22, waveform: .sine)
+        buffers["starEarned"] = makeArpeggio(freqs: [1318.5, 1760, 2093], noteDuration: 0.06, volume: 0.28, waveform: .sine)
+        buffers["bottleSpin"] = makeSweep(fromFreq: 1600, toFreq: 160, duration: 8.0, volume: 0.2, waveform: .triangle)
+        buffers["bottleLand"] = makeArpeggio(freqs: [2093, 1567.98, 1046.5], noteDuration: 0.07, volume: 0.32, waveform: .sine)
+        buffers["playerPicked"] = makeChord(freqs: [523.25, 659.25, 783.99, 1046.5], duration: 0.5, volume: 0.3, waveform: .sine)
+        buffers["tabSwitch"] = makeTone(freq: 1320, duration: 0.04, volume: 0.14, waveform: .sine, attack: 0.001, release: 0.035)
+        buffers["diceRoll"] = makeDiceRoll(duration: 1.0, volume: 0.22)
     }
 
     private enum Waveform { case sine, triangle, square, sawtooth }
@@ -173,6 +173,33 @@ final class SoundManager {
         return buf
     }
 
+    private func makeDiceRoll(duration: Double, volume: Float) -> AVAudioPCMBuffer? {
+        let frames = Int(sampleRate * duration)
+        guard let buf = makeBuffer(frameCount: frames), let ch = buf.floatChannelData?[0] else { return nil }
+        var clickTimes: [Int] = []
+        var t: Double = 0
+        while t < duration {
+            clickTimes.append(Int(t * sampleRate))
+            let gap = Double.random(in: 0.04...0.11) * (1.0 + t / duration * 1.5)
+            t += gap
+        }
+        for i in 0..<frames {
+            let p = Double(i) / Double(frames)
+            let env: Float = p < 0.85 ? 1.0 : Float((1.0 - p) / 0.15)
+            var s: Float = (Float.random(in: -1...1)) * 0.12 * env
+            for clickStart in clickTimes {
+                let rel = i - clickStart
+                if rel >= 0 && rel < 400 {
+                    let clickEnv = Float(exp(-Double(rel) / 60.0))
+                    let phase = Double(rel) / sampleRate * Double.random(in: 900...1400)
+                    s += Float(sin(2.0 * .pi * phase)) * clickEnv * 0.5 * env
+                }
+            }
+            ch[i] = s * volume
+        }
+        return buf
+    }
+
     private func makeArpeggio(freqs: [Double], noteDuration: Double, volume: Float, waveform: Waveform) -> AVAudioPCMBuffer? {
         let framesPerNote = Int(sampleRate * noteDuration)
         let frames = framesPerNote * freqs.count
@@ -194,7 +221,9 @@ final class SoundManager {
         guard isSoundEnabled, isEngineStarted, let buffer = buffers[key], !players.isEmpty else { return }
         let player = players[nextPlayerIndex]
         nextPlayerIndex = (nextPlayerIndex + 1) % players.count
-        player.scheduleBuffer(buffer, at: nil, options: .interrupts, completionHandler: nil)
+        player.stop()
+        player.play()
+        player.scheduleBuffer(buffer, at: nil, options: [], completionHandler: nil)
     }
 
     func playGameStart() {

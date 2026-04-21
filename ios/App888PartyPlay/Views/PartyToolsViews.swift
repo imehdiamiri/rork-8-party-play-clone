@@ -379,9 +379,6 @@ struct DiceToolView: View {
                             values[i] = Int.random(in: 1...6)
                         }
                     }
-                    if t == ticks - 3 {
-                        SoundManager.shared.playDiceRoll()
-                    }
                 }
             }
             await MainActor.run {

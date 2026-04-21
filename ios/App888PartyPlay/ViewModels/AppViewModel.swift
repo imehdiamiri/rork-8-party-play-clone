@@ -259,7 +259,29 @@ final class AppViewModel {
         Task {
             if let record = await resilienceService.checkForActiveSession() {
                 pendingRejoinSessionID = record.id
-                showRejoinPrompt = true
+                autoRejoinSession()
+            }
+        }
+    }
+
+    private func autoRejoinSession() {
+        guard let sessionID = pendingRejoinSessionID else { return }
+        Task {
+            do {
+                let record = try await resilienceService.fetchLatestSessionState(sessionID: sessionID)
+                guard record.status == "active" else {
+                    resilienceService.clearActiveSession()
+                    pendingRejoinSessionID = nil
+                    return
+                }
+                applyRemoteSessionRecord(record)
+                if let roomCode = record.sessionState?.roomCode {
+                    observeRoom(code: roomCode)
+                }
+                pendingRejoinSessionID = nil
+            } catch {
+                resilienceService.clearActiveSession()
+                pendingRejoinSessionID = nil
             }
         }
     }
