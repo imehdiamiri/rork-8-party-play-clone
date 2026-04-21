@@ -71,7 +71,7 @@ struct CardsRootView: View {
                     .tracking(2)
                     .foregroundStyle(.white.opacity(0.45))
                 Text("Tools")
-                    .viralTitleStyle(size: 38, weight: .black)
+                    .viralTitleStyle(size: 20, weight: .black)
                     .foregroundStyle(.white)
             }
             Spacer(minLength: 8)
@@ -174,7 +174,7 @@ struct CardsRootView: View {
                         .tracking(2)
                         .foregroundStyle(.white.opacity(0.45))
                     Text("Ready to Use Cards")
-                        .viralTitleStyle(size: 30, weight: .black)
+                        .viralTitleStyle(size: 20, weight: .black)
                         .foregroundStyle(.white)
                 }
                 Spacer()

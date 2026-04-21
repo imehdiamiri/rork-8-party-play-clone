@@ -114,7 +114,7 @@ struct SocialRootView: View {
     private var socialHeader: some View {
         HStack(alignment: .center, spacing: 10) {
             Text("Friends")
-                .font(.title3.weight(.bold))
+                .viralTitleStyle(size: 20, weight: .black)
                 .foregroundStyle(.white)
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -210,7 +210,7 @@ struct HomeView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
             Text("888partyplay")
-                .viralTitleStyle(size: 26, weight: .black)
+                .viralTitleStyle(size: 20, weight: .black)
                 .foregroundStyle(.white)
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -587,7 +587,8 @@ struct FriendsView: View {
             HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Public Rooms")
-                        .font(.subheadline.weight(.semibold))
+                        .viralTitleStyle(size: 20, weight: .black)
+                        .foregroundStyle(.white)
                     Text("Open multiplayer rooms you can join.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -677,7 +678,7 @@ struct FriendsView: View {
     private var friendsHeader: some View {
         HStack(alignment: .center, spacing: 10) {
             Text("Friends")
-                .font(.title3.weight(.bold))
+                .viralTitleStyle(size: 20, weight: .black)
                 .foregroundStyle(.white)
                 .lineLimit(1)
             Spacer(minLength: 8)

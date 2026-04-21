@@ -221,7 +221,7 @@ struct GeneratorView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
             Text("Factory")
-                .font(.title3.weight(.bold))
+                .viralTitleStyle(size: 20, weight: .black)
                 .foregroundStyle(.white)
                 .lineLimit(1)
             Spacer(minLength: 8)
