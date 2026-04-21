@@ -73,8 +73,8 @@ struct OnboardingView: View {
                     .font(.title2.weight(.medium))
                     .foregroundStyle(.secondary)
 
-                Text("888PartyPlay")
-                    .font(.system(size: 42, weight: .heavy, design: .rounded))
+                Text("888partyplay")
+                    .viralTitleStyle(size: 52, weight: .black)
                     .foregroundStyle(
                         LinearGradient(
                             colors: [.white, .white.opacity(0.85)],

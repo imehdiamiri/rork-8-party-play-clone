@@ -7,7 +7,7 @@ extension AppViewModel {
     }
 
     var inviteShareMessage: String {
-        "Join me on 888Play \u{1F3AE} — use my invite code \(inviteCode) to get +10 \u{2605}: \(inviteShareLink)"
+        "Join me on 888partyplay \u{1F3AE} — use my invite code \(inviteCode) to get +10 \u{2605}: \(inviteShareLink)"
     }
 
     func setPendingInviteCode(_ code: String) {

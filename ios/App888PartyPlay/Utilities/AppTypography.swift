@@ -1,5 +1,17 @@
 import SwiftUI
 
+extension Font {
+    static func viralTitle(size: CGFloat, weight: Font.Weight = .black) -> Font {
+        .system(size: size, weight: weight, design: .default).width(.compressed)
+    }
+}
+
+extension View {
+    func viralTitleStyle(size: CGFloat, weight: Font.Weight = .black) -> some View {
+        self.font(.viralTitle(size: size, weight: weight))
+    }
+}
+
 struct AppLanguageFontModifier: ViewModifier {
     let language: AppLanguage
 

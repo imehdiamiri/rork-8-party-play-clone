@@ -462,7 +462,7 @@ final class AppViewModel {
 
     func startSingleDeviceMode(game: GameType, playerNames: [String], roundCount: Int = 3) {
         guard canPlayGame(game) else {
-            economyFeedback = EconomyFeedback(title: "Premium Game", message: "Subscribe to 888Play+ to unlock \(game.name).", style: .warning)
+            economyFeedback = EconomyFeedback(title: "Premium Game", message: "Subscribe to 888partyplay+ to unlock \(game.name).", style: .warning)
             return
         }
         let resolvedPlayers: [PlayerProfile] = playerNames.enumerated().map { index, rawName in
@@ -623,7 +623,7 @@ final class AppViewModel {
             return
         }
         guard canPlayGame(room.game) else {
-            lobbyNotice = "Subscribe to 888Play+ to host this premium game."
+            lobbyNotice = "Subscribe to 888partyplay+ to host this premium game."
             return
         }
         guard room.players.count >= room.minPlayers else {

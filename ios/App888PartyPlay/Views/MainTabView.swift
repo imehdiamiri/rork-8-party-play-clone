@@ -209,8 +209,8 @@ struct HomeView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
-            Text("888PartyPlay")
-                .font(.title3.weight(.bold))
+            Text("888partyplay")
+                .viralTitleStyle(size: 26, weight: .black)
                 .foregroundStyle(.white)
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -406,7 +406,7 @@ struct GameCardView: View {
             Spacer(minLength: 8)
 
             Text(game.id.name)
-                .font(.system(size: 16, weight: .bold))
+                .viralTitleStyle(size: 20, weight: .black)
                 .foregroundStyle(.white)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
@@ -1238,7 +1238,7 @@ struct WalletView: View {
                 SectionHeaderView(title: "How You Earn Stars", subtitle: "Stars cannot be farmed from normal gameplay.")
                 sourceRow(icon: "gift.fill", tint: .pink, title: "Sign-up Bonus", detail: "+100 ★ when you create an account")
                 sourceRow(icon: "sun.max.fill", tint: .green, title: "Daily Reward", detail: "+10 ★ every day")
-                sourceRow(icon: "crown.fill", tint: .indigo, title: "888Play+", detail: "AI cards cost just 1 ★ instead of 5")
+                sourceRow(icon: "crown.fill", tint: .indigo, title: "888partyplay+", detail: "AI cards cost just 1 ★ instead of 5")
             }
         }
     }
@@ -1491,7 +1491,7 @@ struct ProfileView: View {
                         .background(.blue.opacity(0.14), in: .rect(cornerRadius: 12))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(game.name)
-                            .font(.subheadline.weight(.semibold))
+                            .viralTitleStyle(size: 17, weight: .black)
                         Text("Your stats for this game")
                             .font(.caption)
                             .foregroundStyle(.secondary)

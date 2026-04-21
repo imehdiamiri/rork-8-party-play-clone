@@ -110,7 +110,7 @@ struct GameDetailView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Premium Game")
                             .font(.headline.weight(.bold))
-                        Text("Subscribe to 888Play+ to unlock \(game.name) and every other premium game.")
+                        Text("Subscribe to 888partyplay+ to unlock \(game.name) and every other premium game.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -130,7 +130,7 @@ struct GameDetailView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "crown.fill")
                             .font(.subheadline.weight(.bold))
-                        Text("Unlock with 888Play+")
+                        Text("Unlock with 888partyplay+")
                             .font(.subheadline.weight(.bold))
                     }
                     .foregroundStyle(.white)

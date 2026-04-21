@@ -56,7 +56,7 @@ struct SectionHeaderView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .viralTitleStyle(size: 20, weight: .black)
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.caption)

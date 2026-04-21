@@ -71,7 +71,7 @@ struct CardsRootView: View {
                     .tracking(2)
                     .foregroundStyle(.white.opacity(0.45))
                 Text("Tools")
-                    .font(.system(size: 30, weight: .black))
+                    .viralTitleStyle(size: 38, weight: .black)
                     .foregroundStyle(.white)
             }
             Spacer(minLength: 8)
@@ -174,7 +174,7 @@ struct CardsRootView: View {
                         .tracking(2)
                         .foregroundStyle(.white.opacity(0.45))
                     Text("Ready to Use Cards")
-                        .font(.system(size: 24, weight: .black))
+                        .viralTitleStyle(size: 30, weight: .black)
                         .foregroundStyle(.white)
                 }
                 Spacer()
@@ -309,7 +309,7 @@ private struct CategoryListRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(category.title)
-                    .font(.system(size: 15, weight: .black))
+                    .viralTitleStyle(size: 19, weight: .black)
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 Text(category.subtitle)
@@ -379,7 +379,7 @@ private struct CategoryRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(category.title)
-                    .font(.system(size: 15, weight: .black))
+                    .viralTitleStyle(size: 19, weight: .black)
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 Text(category.subtitle)
@@ -542,7 +542,7 @@ struct CardsDeckView: View {
                     .background(category.accentColor.opacity(0.18), in: .circle)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(category.title)
-                        .font(.system(size: 17, weight: .black))
+                        .viralTitleStyle(size: 22, weight: .black)
                         .foregroundStyle(.white)
                     Text("Card #\(max(1, cardCounter))")
                         .font(.system(size: 10, weight: .bold))
@@ -811,11 +811,11 @@ struct CardsDeckView: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(category.title.uppercased())
-                            .font(.system(size: 10, weight: .black))
+                            .viralTitleStyle(size: 11, weight: .black)
                             .tracking(1.8)
                             .foregroundStyle(category.accentColor)
                         Text(card.subtype.title)
-                            .font(.system(size: 11, weight: .semibold))
+                            .viralTitleStyle(size: 13, weight: .heavy)
                             .foregroundStyle(.black.opacity(0.4))
                     }
                     Spacer()
@@ -835,7 +835,7 @@ struct CardsDeckView: View {
 
                 // Prompt text
                 Text(card.text)
-                    .font(.system(size: 26, weight: .black))
+                    .viralTitleStyle(size: 30, weight: .black)
                     .foregroundStyle(.black.opacity(0.88))
                     .multilineTextAlignment(.center)
                     .lineLimit(6)
@@ -850,8 +850,8 @@ struct CardsDeckView: View {
                     HStack(spacing: 5) {
                         Image(systemName: category.icon)
                             .font(.system(size: 10, weight: .black))
-                        Text("888 Party Play")
-                            .font(.system(size: 10, weight: .heavy))
+                        Text("888partyplay")
+                            .viralTitleStyle(size: 11, weight: .heavy)
                             .tracking(0.5)
                     }
                     .foregroundStyle(.black.opacity(0.3))
@@ -1062,7 +1062,7 @@ private struct SavedCardsSheet: View {
                         ForEach(saved) { card in
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(card.category.title.uppercased())
-                                    .font(.caption2.weight(.heavy))
+                                    .viralTitleStyle(size: 11, weight: .heavy)
                                     .tracking(1.2)
                                     .foregroundStyle(card.category.accentColor)
                                 Text(card.text)
