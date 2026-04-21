@@ -74,7 +74,9 @@ struct OnboardingView: View {
                     .foregroundStyle(.secondary)
 
                 Text("888partyplay")
-                    .viralTitleStyle(size: 52, weight: .black)
+                    .viralTitleStyle(size: 38, weight: .black)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
                     .foregroundStyle(
                         LinearGradient(
                             colors: [.white, .white.opacity(0.85)],
