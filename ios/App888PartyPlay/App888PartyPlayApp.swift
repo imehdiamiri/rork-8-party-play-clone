@@ -56,10 +56,43 @@ struct App888PartyPlayApp: App {
     }
 }
 
-class AppDelegate: NSObject, UIApplicationDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate, UIGestureRecognizerDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = NotificationService.shared
         return true
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        installGlobalKeyboardDismissGesture()
+    }
+
+    private func installGlobalKeyboardDismissGesture() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let windows = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+            for window in windows {
+                if window.gestureRecognizers?.contains(where: { $0.name == "GlobalKeyboardDismiss" }) == true {
+                    continue
+                }
+                let tap = UITapGestureRecognizer(target: self, action: #selector(self.dismissKeyboardFromWindow))
+                tap.name = "GlobalKeyboardDismiss"
+                tap.cancelsTouchesInView = false
+                tap.delaysTouchesBegan = false
+                tap.delaysTouchesEnded = false
+                tap.delegate = self
+                window.addGestureRecognizer(tap)
+            }
+        }
+    }
+
+    @objc private func dismissKeyboardFromWindow() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        true
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

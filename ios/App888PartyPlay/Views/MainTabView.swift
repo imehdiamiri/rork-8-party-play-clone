@@ -195,10 +195,15 @@ struct HomeView: View {
             selectedLibraryTab = .playable
         }
         .sheet(isPresented: $showJoinSheet) {
-            QuickJoinSheet(appModel: appModel)
+            QuickJoinSheet(appModel: appModel, onGameStarted: { showJoinSheet = false })
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
                 .presentationContentInteraction(.scrolls)
+        }
+        .onChange(of: appModel.activeSession?.id) { _, newID in
+            if newID != nil {
+                showJoinSheet = false
+            }
         }
     }
 
@@ -370,12 +375,25 @@ struct CompactLibraryTabGlassEffect: ViewModifier {
 
 struct QuickJoinSheet: View {
     let appModel: AppViewModel
+    var onGameStarted: (() -> Void)? = nil
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            CasualJoinRoomView(appModel: appModel)
+            CasualJoinRoomView(appModel: appModel, onJoinedAndStarted: { _ in })
                 .navigationTitle("Join Room")
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Cancel") { dismiss() }
+                    }
+                }
+        }
+        .onChange(of: appModel.activeSession?.id) { _, newID in
+            if newID != nil {
+                onGameStarted?()
+                dismiss()
+            }
         }
     }
 }
@@ -517,6 +535,11 @@ struct FriendsView: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
             .presentationContentInteraction(.scrolls)
+        }
+        .onChange(of: appModel.activeSession?.id) { _, newID in
+            if newID != nil {
+                showJoinSheet = false
+            }
         }
     }
 

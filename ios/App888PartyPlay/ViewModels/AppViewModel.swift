@@ -420,12 +420,37 @@ final class AppViewModel {
 
     func logout() {
         timerTask?.cancel()
+        timerTask = nil
+        activeSession = nil
+        activeSessionRecordID = nil
+        sessionOverridePlayerID = nil
+        currentRoom = nil
+        quickRejoinRoom = nil
+        selectedTab = .home
         Task {
             try? await authService.signOut()
             await realtimeService.unsubscribeFromRoom()
             await realtimeService.unsubscribeFromSocialUpdates()
             await realtimeService.untrackPresence()
-            applyGuestState()
+            resilienceService.clearActiveSession()
+            isAuthenticated = false
+            username = "Guest"
+            displayName = "Guest"
+            email = nil
+            publicUserID = nil
+            avatarSymbol = "person.crop.circle.fill"
+            profileImageData = nil
+            currentProvider = .guest
+            currentUserID = nil
+            currentProfileID = nil
+            friends = []
+            requests = []
+            friendSearchResults = []
+            roomInvites = []
+            visibleRooms = []
+            starWallet = StarWallet(balance: 100)
+            subscription = .none
+            gameUnlocks = []
         }
     }
 
