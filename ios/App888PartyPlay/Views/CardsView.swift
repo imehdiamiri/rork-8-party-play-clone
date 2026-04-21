@@ -178,12 +178,17 @@ struct CardsRootView: View {
                         .foregroundStyle(.white)
                 }
                 Spacer()
-                Text("\(totalCardsCount)")
-                    .font(.system(size: 11, weight: .heavy))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.white.opacity(0.08), in: .capsule)
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("\(totalCardsCount)")
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.white.opacity(0.08), in: .capsule)
+                    Image(systemName: "rectangle.on.rectangle.angled.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
             }
 
             VStack(spacing: 10) {

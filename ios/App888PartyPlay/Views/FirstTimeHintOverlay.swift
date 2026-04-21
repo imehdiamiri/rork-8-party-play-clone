@@ -80,8 +80,6 @@ struct FirstTimeHintOverlay: View {
 
 extension View {
     func firstTimeHint(key: String, icon: String, title: String, tip: String, accent: Color = .blue) -> some View {
-        self.overlay {
-            FirstTimeHintOverlay(storageKey: key, icon: icon, title: title, tip: tip, accent: accent)
-        }
+        self
     }
 }

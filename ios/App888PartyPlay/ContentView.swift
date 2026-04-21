@@ -12,6 +12,12 @@ struct ContentView: View {
                 } else if !appModel.hasCompletedOnboarding {
                     OnboardingView { name in
                         appModel.completeOnboarding(playerName: name)
+                        Task {
+                            await NotificationService.shared.checkCurrentStatus()
+                            if !NotificationService.shared.isAuthorized {
+                                _ = await NotificationService.shared.requestPermission()
+                            }
+                        }
                     }
                 } else if appModel.isAuthenticated {
                     MainTabView(appModel: appModel, store: store)
@@ -35,9 +41,6 @@ struct ContentView: View {
         .animation(.smooth, value: appModel.hasCompletedOnboarding)
         .task {
             await NotificationService.shared.checkCurrentStatus()
-            if !NotificationService.shared.isAuthorized {
-                _ = await NotificationService.shared.requestPermission()
-            }
         }
         .onAppear {
             store.onStarsGranted = { amount, tier, periodKey, expiresAt in
