@@ -132,9 +132,20 @@ private struct ToolCard: View {
                         )
                     )
                 Circle().strokeBorder(tool.tint.opacity(0.35), lineWidth: 1)
-                Image(systemName: tool.icon)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
+                Group {
+                    switch tool {
+                    case .bottle:
+                        BeerBottleIcon()
+                            .frame(width: 20, height: 28)
+                    case .hourglass:
+                        HourglassShape(progress: 1, isRunning: false)
+                            .frame(width: 22, height: 30)
+                    default:
+                        Image(systemName: tool.icon)
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
             }
             .frame(width: 54, height: 54)
             .shadow(color: tool.tint.opacity(0.35), radius: 10, y: 4)
@@ -628,16 +639,10 @@ struct BottleToolView: View {
     }
 
     private func bottleView(size: CGFloat) -> some View {
-        AsyncImage(url: URL(string: "https://r2-pub.rork.com/generated-images/34a4521d-fdfd-41b9-a035-e98505e5dfb8.png")) { phase in
-            if let image = phase.image {
-                image.resizable().aspectRatio(contentMode: .fit)
-            } else {
-                BeerBottleIcon()
-            }
-        }
-        .frame(width: size * 0.3, height: size * 0.72)
-        .shadow(color: .black.opacity(0.55), radius: 14, y: 6)
-        .rotationEffect(.degrees(bottleAngle))
+        BeerBottleIcon()
+            .frame(width: size * 0.3, height: size * 0.72)
+            .shadow(color: .black.opacity(0.55), radius: 14, y: 6)
+            .rotationEffect(.degrees(bottleAngle))
     }
 
     private var spinButton: some View {
@@ -754,17 +759,8 @@ struct HourglassToolView: View {
     }
 
     private var hourglassImage: some View {
-        AsyncImage(url: URL(string: "https://r2-pub.rork.com/generated-images/cc809ffb-12b4-424b-a9f1-ea496b5f37d2.png")) { phase in
-            if let image = phase.image {
-                image.resizable().aspectRatio(contentMode: .fit)
-            } else {
-                Image(systemName: "hourglass")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .foregroundStyle(.cyan)
-            }
-        }
-        .shadow(color: .cyan.opacity(0.25), radius: 16, y: 4)
+        HourglassShape(progress: progress, isRunning: isRunning)
+            .shadow(color: .cyan.opacity(0.25), radius: 16, y: 4)
     }
 
     private var presetsRow: some View {
@@ -978,93 +974,12 @@ struct HourglassToolView: View {
 // MARK: - Realistic Hourglass View
 
 private struct RealisticHourglassView: View {
-    let progress: Double // 1.0 = just started (full top), 0.0 = done (empty top)
+    let progress: Double
     let isRunning: Bool
 
-    private static let stageURLs: [String] = [
-        "https://r2-pub.rork.com/generated-images/78c5fcee-8aa7-4dfd-b7ea-f172199c5379.png", // 100% top
-        "https://r2-pub.rork.com/generated-images/66eedb95-d55e-4e8f-a692-33e3cf5c79ea.png", // 75%
-        "https://r2-pub.rork.com/generated-images/cc809ffb-12b4-424b-a9f1-ea496b5f37d2.png", // 50%
-        "https://r2-pub.rork.com/generated-images/11d8d6aa-472b-493a-8d47-41817ecc11a6.png", // 25%
-        "https://r2-pub.rork.com/generated-images/256779c5-8b00-4986-9571-a0bb26478349.png"  // 0% top (full bottom)
-    ]
-
-    @State private var grainPhase: CGFloat = 0
-    @State private var jitter: CGFloat = 0
-
-    private var stageIndex: Int {
-        // progress 1.0 -> 0 (full top), 0.0 -> 4 (empty top)
-        let p = max(0.0, min(1.0, progress))
-        let idx = Int(round((1.0 - p) * 4.0))
-        return max(0, min(4, idx))
-    }
-
-    private var nextStageIndex: Int {
-        min(4, stageIndex + 1)
-    }
-
-    private var blend: Double {
-        let p = max(0.0, min(1.0, progress))
-        let continuous = (1.0 - p) * 4.0
-        return continuous - Double(Int(continuous.rounded(.down)))
-    }
-
     var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
-
-            ZStack {
-                // Preload all stages, fade between current and next for smooth transitions
-                ForEach(0..<Self.stageURLs.count, id: \.self) { i in
-                    AsyncImage(url: URL(string: Self.stageURLs[i])) { phase in
-                        if let image = phase.image {
-                            image.resizable().aspectRatio(contentMode: .fit)
-                        } else {
-                            Color.clear
-                        }
-                    }
-                    .frame(width: w, height: h)
-                    .opacity(opacity(for: i))
-                    .animation(.easeInOut(duration: 0.4), value: stageIndex)
-                    .animation(.easeInOut(duration: 0.4), value: blend)
-                }
-                .shadow(color: .cyan.opacity(0.25), radius: 16, y: 4)
-
-                // Subtle grain jitter suggesting flow
-                if isRunning && progress > 0.001 && progress < 0.999 {
-                    ForEach(0..<6, id: \.self) { i in
-                        Circle()
-                            .fill(Color(red: 1.0, green: 0.72, blue: 0.2))
-                            .frame(width: 2.5, height: 2.5)
-                            .offset(
-                                x: CGFloat.random(in: -1.5...1.5) + jitter * 0.5,
-                                y: (grainPhase + CGFloat(i) * 0.18).truncatingRemainder(dividingBy: 1) * h * 0.3 - h * 0.04
-                            )
-                            .position(x: w / 2, y: h / 2)
-                            .opacity(0.85)
-                            .blur(radius: 0.3)
-                    }
-                }
-            }
-            .onAppear {
-                withAnimation(.linear(duration: 0.5).repeatForever(autoreverses: false)) {
-                    grainPhase = 1
-                }
-                withAnimation(.easeInOut(duration: 0.08).repeatForever(autoreverses: true)) {
-                    jitter = 1
-                }
-            }
-        }
-    }
-
-    private func opacity(for index: Int) -> Double {
-        if index == stageIndex {
-            return 1.0 - blend * 0.9
-        } else if index == nextStageIndex && nextStageIndex != stageIndex {
-            return blend
-        }
-        return 0
+        HourglassShape(progress: progress, isRunning: isRunning)
+            .shadow(color: .cyan.opacity(0.25), radius: 16, y: 4)
     }
 }
 
