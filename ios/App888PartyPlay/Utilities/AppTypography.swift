@@ -2,7 +2,7 @@ import SwiftUI
 
 extension Font {
     static func viralTitle(size: CGFloat, weight: Font.Weight = .black) -> Font {
-        .system(size: size, weight: weight, design: .default).width(.compressed)
+        .system(size: size, weight: weight, design: .rounded)
     }
 }
 
