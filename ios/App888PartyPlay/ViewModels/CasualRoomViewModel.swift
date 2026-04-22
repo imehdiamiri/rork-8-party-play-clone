@@ -233,12 +233,12 @@ final class CasualRoomViewModel {
         readyCheckLocalConfirmed = true
         readyConfirmedPlayerIDs = [localPlayer.id]
         Task {
-            // Fire the ready-check request up to 3 times with a small delay so
-            // guests that briefly had channel hiccups still receive it.
+            await roomService.clearAllReady(roomID: room.id, hostSessionToken: sessionToken)
+            await roomService.setPlayerReady(roomID: room.id, sessionToken: sessionToken, isReady: true)
+            await roomService.broadcastRoomRefresh()
             for attempt in 0..<3 {
                 await roomService.broadcastReadyCheckRequested(hostID: localPlayer.id)
                 await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
-                // Also push a roomStateSync so guests re-fetch and stay in sync.
                 await roomService.broadcastRoomState(room)
                 if attempt < 2 {
                     try? await Task.sleep(for: .milliseconds(600))
@@ -249,27 +249,33 @@ final class CasualRoomViewModel {
     }
 
     func confirmReady() {
-        guard readyCheckActive, let localPlayer else { return }
+        guard readyCheckActive, let localPlayer, let room else { return }
         if !readyCheckLocalConfirmed {
             readyCheckLocalConfirmed = true
             readyConfirmedPlayerIDs.insert(localPlayer.id)
             Task {
+                await roomService.setPlayerReady(roomID: room.id, sessionToken: sessionToken, isReady: true)
                 await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
+                await roomService.broadcastRoomRefresh()
             }
         }
         checkAllReadyAndStart()
     }
 
     func cancelReadyCheck() {
-        guard isHost else { return }
+        guard isHost, let room else { return }
         readyCheckActive = false
         readyCheckLocalConfirmed = false
         readyConfirmedPlayerIDs.removeAll()
-        Task { await roomService.broadcastReadyCheckCancelled() }
+        Task {
+            await roomService.clearAllReady(roomID: room.id, hostSessionToken: sessionToken)
+            await roomService.broadcastReadyCheckCancelled()
+            await roomService.broadcastRoomRefresh()
+        }
     }
 
     private func checkAllReadyAndStart() {
-        guard isHost, let room else { return }
+        guard isHost, readyCheckActive, let room, room.status == .waiting else { return }
         let connectedIDs = Set(room.players.filter { $0.isConnected }.map { $0.id })
         guard !connectedIDs.isEmpty else { return }
         guard connectedIDs.isSubset(of: readyConfirmedPlayerIDs) else { return }
@@ -509,11 +515,12 @@ final class CasualRoomViewModel {
             }
         }
 
-        roomService.onReadyCheckRequested = { [weak self] _ in
+        roomService.onReadyCheckRequested = { [weak self] hostID in
             guard let self else { return }
             if !self.isHost {
                 self.readyCheckActive = true
                 self.readyCheckLocalConfirmed = false
+                self.readyConfirmedPlayerIDs = [hostID]
             }
         }
 
@@ -548,6 +555,9 @@ final class CasualRoomViewModel {
             }
 
             let players = playerRecords.map { $0.toGuestPlayer() }
+            let confirmedIDs = Set(playerRecords.compactMap { record in
+                record.readyConfirmedAt == nil ? nil : record.guestPlayerId
+            })
 
             // DB-fallback kick detection: if we (non-host) are no longer in the player list,
             // the host kicked us. Fires even if the broadcast was missed.
@@ -578,9 +588,21 @@ final class CasualRoomViewModel {
                 playMode: resolvedPlayMode,
                 teamState: resolvedTeamState
             )
+            readyConfirmedPlayerIDs = confirmedIDs
+            if status == .waiting {
+                readyCheckActive = !confirmedIDs.isEmpty
+            } else {
+                readyCheckActive = false
+            }
+            if let localID = localPlayer?.id {
+                readyCheckLocalConfirmed = confirmedIDs.contains(localID)
+            }
             playMode = resolvedPlayMode
             teamState = resolvedTeamState ?? .default
             gameStarted = status == .starting || status == .inProgress
+            if isHost {
+                checkAllReadyAndStart()
+            }
         } catch {
             errorMessage = "Connection lost. Reconnecting…"
         }

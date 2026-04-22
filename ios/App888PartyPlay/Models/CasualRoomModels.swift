@@ -78,6 +78,7 @@ nonisolated struct CasualRoomPlayerRecord: Codable, Identifiable, Hashable, Send
     let sessionToken: String
     let joinedAt: Date?
     let lastSeenAt: Date?
+    let readyConfirmedAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -90,6 +91,7 @@ nonisolated struct CasualRoomPlayerRecord: Codable, Identifiable, Hashable, Send
         case sessionToken = "session_token"
         case joinedAt = "joined_at"
         case lastSeenAt = "last_seen_at"
+        case readyConfirmedAt = "ready_confirmed_at"
     }
 
     func toGuestPlayer() -> GuestPlayer {
@@ -296,6 +298,18 @@ nonisolated enum CasualBroadcastEvent: String, Sendable {
     case readyCheckCancelled = "ready_check_cancelled"
     case roomStateFull = "room_state_full"
     case gameStateSync = "game_state_sync"
+}
+
+nonisolated struct CasualPlayerEventPayload: Codable, Sendable {
+    let playerId: String
+}
+
+nonisolated struct CasualHostChangedPayload: Codable, Sendable {
+    let newHostId: String
+}
+
+nonisolated struct CasualReadyCheckRequestPayload: Codable, Sendable {
+    let hostId: String
 }
 
 nonisolated struct CasualGameStatePayload: Codable, Sendable {

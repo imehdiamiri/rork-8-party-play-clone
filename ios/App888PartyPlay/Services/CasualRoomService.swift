@@ -236,6 +236,29 @@ final class CasualRoomService {
         await notifyRoomUpdate()
     }
 
+    func clearAllReady(roomID: UUID, hostSessionToken: String) async {
+        let params: [String: AnyJSON] = [
+            "p_room_id": .string(roomID.uuidString),
+            "p_host_session_token": .string(hostSessionToken)
+        ]
+
+        _ = try? await supabase.client
+            .rpc("casual_clear_all_ready", params: params)
+            .execute()
+    }
+
+    func setPlayerReady(roomID: UUID, sessionToken: String, isReady: Bool) async {
+        let params: [String: AnyJSON] = [
+            "p_room_id": .string(roomID.uuidString),
+            "p_session_token": .string(sessionToken),
+            "p_ready": .bool(isReady)
+        ]
+
+        _ = try? await supabase.client
+            .rpc("casual_set_ready", params: params)
+            .execute()
+    }
+
     func leaveRoom(roomID: UUID, playerID: UUID, sessionToken: String) async throws {
         let params: [String: AnyJSON] = [
             "p_room_id": .string(roomID.uuidString),
@@ -537,6 +560,10 @@ final class CasualRoomService {
         try? await channel?.broadcast(event: CasualBroadcastEvent.roomStateFull.rawValue, message: payload)
     }
 
+    func broadcastRoomRefresh() async {
+        await notifyRoomUpdate()
+    }
+
     func broadcastGameState(_ payload: CasualGameStatePayload) async {
         try? await channel?.broadcast(event: CasualBroadcastEvent.gameStateSync.rawValue, message: payload)
     }
@@ -544,13 +571,13 @@ final class CasualRoomService {
     private func handleReadyCheckMessage(_ message: JSONObject, kind: ReadyKind) {
         switch kind {
         case .request:
-            if case .string(let idStr) = message["hostId"], let uuid = UUID(uuidString: idStr) {
-                onReadyCheckRequested?(uuid)
-            }
+            guard let payload = decodeMessage(message, as: CasualReadyCheckRequestPayload.self),
+                  let uuid = UUID(uuidString: payload.hostId) else { return }
+            onReadyCheckRequested?(uuid)
         case .confirm:
-            if case .string(let idStr) = message["playerId"], let uuid = UUID(uuidString: idStr) {
-                onReadyCheckConfirmed?(uuid)
-            }
+            guard let payload = decodeMessage(message, as: CasualPlayerEventPayload.self),
+                  let uuid = UUID(uuidString: payload.playerId) else { return }
+            onReadyCheckConfirmed?(uuid)
         }
     }
 
@@ -565,6 +592,12 @@ final class CasualRoomService {
     }
 
     private func decodeMessage<T: Decodable>(_ message: JSONObject, as type: T.Type) -> T? {
+        if let payload = message["payload"]?.objectValue,
+           let data = try? JSONEncoder().encode(payload),
+           let decoded = try? JSONDecoder().decode(T.self, from: data) {
+            return decoded
+        }
+
         guard let data = try? JSONEncoder().encode(message) else { return nil }
         return try? JSONDecoder().decode(T.self, from: data)
     }
@@ -576,15 +609,15 @@ final class CasualRoomService {
     }
 
     private func handlePlayerKickedMessage(_ message: JSONObject) {
-        if case .string(let idStr) = message["playerId"], let uuid = UUID(uuidString: idStr) {
-            onPlayerKicked?(uuid)
-        }
+        guard let payload = decodeMessage(message, as: CasualPlayerEventPayload.self),
+              let uuid = UUID(uuidString: payload.playerId) else { return }
+        onPlayerKicked?(uuid)
     }
 
     private func handleHostChangedMessage(_ message: JSONObject) {
-        if case .string(let idStr) = message["newHostId"], let uuid = UUID(uuidString: idStr) {
-            onHostChanged?(uuid)
-        }
+        guard let payload = decodeMessage(message, as: CasualHostChangedPayload.self),
+              let uuid = UUID(uuidString: payload.newHostId) else { return }
+        onHostChanged?(uuid)
     }
 
     private func generateRoomCode() -> String {
