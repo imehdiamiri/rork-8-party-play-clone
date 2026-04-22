@@ -664,6 +664,8 @@ struct GuestLobbyView: View {
         }
         .task(id: casualVM.gameStarted) {
             guard casualVM.gameStarted else { return }
+            try? await Task.sleep(for: .milliseconds(450))
+            guard casualVM.gameStarted else { return }
             startGameSession(appModel: appModel, casualVM: casualVM)
         }
         .onChange(of: scenePhase) { _, newPhase in

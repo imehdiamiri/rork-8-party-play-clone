@@ -198,7 +198,9 @@ struct HomeView: View {
             QuickJoinSheet(appModel: appModel, onGameStarted: { showJoinSheet = false })
         }
         .onChange(of: appModel.activeSession?.id) { _, newID in
-            if newID != nil {
+            guard newID != nil else { return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(650))
                 showJoinSheet = false
             }
         }
@@ -387,7 +389,9 @@ struct QuickJoinSheet: View {
                 }
         }
         .onChange(of: appModel.activeSession?.id) { _, newID in
-            if newID != nil {
+            guard newID != nil else { return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(650))
                 onGameStarted?()
                 dismiss()
             }
@@ -532,7 +536,9 @@ struct FriendsView: View {
             }
         }
         .onChange(of: appModel.activeSession?.id) { _, newID in
-            if newID != nil {
+            guard newID != nil else { return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(650))
                 showJoinSheet = false
             }
         }
