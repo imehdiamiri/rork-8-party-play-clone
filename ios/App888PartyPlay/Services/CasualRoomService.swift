@@ -26,6 +26,7 @@ final class CasualRoomService {
     var onReadyCheckRequested: ((UUID) -> Void)?
     var onReadyCheckConfirmed: ((UUID) -> Void)?
     var onReadyCheckCancelled: (() -> Void)?
+    var onRoomStateBroadcast: ((CasualRoom) -> Void)?
 
     init(supabase: SupabaseService = .shared) {
         self.supabase = supabase
@@ -393,6 +394,7 @@ final class CasualRoomService {
         onReadyCheckRequested = nil
         onReadyCheckConfirmed = nil
         onReadyCheckCancelled = nil
+        onRoomStateBroadcast = nil
     }
 
     private func joinChannel(code: String) async throws {
@@ -417,6 +419,7 @@ final class CasualRoomService {
         let readyReqStream = ch.broadcastStream(event: CasualBroadcastEvent.readyCheckRequested.rawValue)
         let readyConfStream = ch.broadcastStream(event: CasualBroadcastEvent.readyCheckConfirmed.rawValue)
         let readyCancelStream = ch.broadcastStream(event: CasualBroadcastEvent.readyCheckCancelled.rawValue)
+        let fullStateStream = ch.broadcastStream(event: CasualBroadcastEvent.roomStateFull.rawValue)
 
         try await ch.subscribeWithError()
 
@@ -470,8 +473,20 @@ final class CasualRoomService {
                         await self?.onReadyCheckCancelled?()
                     }
                 }
+                group.addTask {
+                    for await message in fullStateStream {
+                        guard !Task.isCancelled else { return }
+                        await self?.handleRoomStateBroadcast(message)
+                    }
+                }
             }
         }
+    }
+
+    private func handleRoomStateBroadcast(_ message: JSONObject) {
+        guard let payload = decodeMessage(message, as: CasualRoomStatePayload.self),
+              let room = payload.toCasualRoom() else { return }
+        onRoomStateBroadcast?(room)
     }
 
     private enum ReadyKind { case request, confirm }
@@ -486,6 +501,11 @@ final class CasualRoomService {
 
     func broadcastReadyCheckCancelled() async {
         await broadcastEvent(.readyCheckCancelled, payload: ["cancelled": "true"])
+    }
+
+    func broadcastRoomState(_ room: CasualRoom) async {
+        let payload = CasualRoomStatePayload(from: room)
+        try? await channel?.broadcast(event: CasualBroadcastEvent.roomStateFull.rawValue, message: payload)
     }
 
     private func handleReadyCheckMessage(_ message: JSONObject, kind: ReadyKind) {

@@ -294,6 +294,7 @@ nonisolated enum CasualBroadcastEvent: String, Sendable {
     case readyCheckRequested = "ready_check_requested"
     case readyCheckConfirmed = "ready_check_confirmed"
     case readyCheckCancelled = "ready_check_cancelled"
+    case roomStateFull = "room_state_full"
 }
 
 nonisolated struct GuestSessionStore {

@@ -236,6 +236,7 @@ final class CasualRoomViewModel {
             await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
         }
         _ = room
+        checkAllReadyAndStart()
     }
 
     func confirmReady() {
@@ -343,6 +344,7 @@ final class CasualRoomViewModel {
             teamState: teamState
         )
         self.room = updated
+        Task { await roomService.broadcastRoomState(updated) }
     }
 
     func leaveRoom() {
@@ -413,6 +415,7 @@ final class CasualRoomViewModel {
                 settings: settings,
                 hostSessionToken: sessionToken
             )
+            await roomService.broadcastRoomState(updated)
         }
     }
 
@@ -448,6 +451,16 @@ final class CasualRoomViewModel {
             self.playMode = room.playMode
             self.teamState = room.teamState ?? .default
             self.gameStarted = true
+            self.readyCheckActive = false
+        }
+
+        roomService.onRoomStateBroadcast = { [weak self] room in
+            guard let self else { return }
+            if self.isHost { return }
+            self.room = room
+            self.playMode = room.playMode
+            self.teamState = room.teamState ?? .default
+            self.fakeAnswerSettings = room.settings
         }
 
         roomService.onPlayerKicked = { [weak self] playerID in
@@ -468,6 +481,16 @@ final class CasualRoomViewModel {
 
         roomService.onHostChanged = { [weak self] newHostID in
             guard let self else { return }
+            if let local = self.localPlayer, local.id == newHostID {
+                self.localPlayer = GuestPlayer(
+                    id: local.id,
+                    displayName: local.displayName,
+                    isHost: true,
+                    isConnected: local.isConnected,
+                    sessionToken: local.sessionToken,
+                    joinedAt: local.joinedAt
+                )
+            }
             Task { @MainActor in
                 await self.refreshRoomFromDB()
             }
@@ -557,12 +580,18 @@ final class CasualRoomViewModel {
         lobbyStartTime = Date()
         waitingTooLong = false
         waitingTimerTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(30))
-            guard !Task.isCancelled else { return }
-            await MainActor.run {
-                guard let self else { return }
-                if let room = self.room, room.players.count < room.minPlayers {
-                    self.waitingTooLong = true
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard let self, let room = self.room, let start = self.lobbyStartTime else { return }
+                    let elapsed = Date().timeIntervalSince(start)
+                    let hasEnough = room.players.count >= room.minPlayers
+                    if hasEnough {
+                        self.waitingTooLong = false
+                    } else if elapsed >= 30 {
+                        self.waitingTooLong = true
+                    }
                 }
             }
         }
