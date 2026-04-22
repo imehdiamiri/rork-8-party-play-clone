@@ -1075,17 +1075,53 @@ nonisolated struct MGPlayerResult: Identifiable, Hashable, Sendable {
     }
 }
 
+nonisolated struct MGSpectatorTile: Hashable, Sendable {
+    let pairId: Int
+    let symbol: String
+    let colorIndex: Int
+    let isFlipped: Bool
+    let isMatched: Bool
+
+    init(pairId: Int, symbol: String, colorIndex: Int, isFlipped: Bool, isMatched: Bool) {
+        self.pairId = pairId
+        self.symbol = symbol
+        self.colorIndex = colorIndex
+        self.isFlipped = isFlipped
+        self.isMatched = isMatched
+    }
+}
+
+nonisolated struct MGSpectatorSnapshot: Hashable, Sendable {
+    let playerID: UUID
+    let playerName: String
+    let tiles: [MGSpectatorTile]
+    let matchedPairs: Int
+    let moveCount: Int
+    let elapsedSeconds: Double
+
+    init(playerID: UUID, playerName: String, tiles: [MGSpectatorTile], matchedPairs: Int, moveCount: Int, elapsedSeconds: Double) {
+        self.playerID = playerID
+        self.playerName = playerName
+        self.tiles = tiles
+        self.matchedPairs = matchedPairs
+        self.moveCount = moveCount
+        self.elapsedSeconds = elapsedSeconds
+    }
+}
+
 nonisolated struct MemoryGridGameState: Hashable, Sendable {
     let gridSize: String
     let currentPlayerIndex: Int
     let playerResults: [MGPlayerResult]
     let isFinished: Bool
+    let spectator: MGSpectatorSnapshot?
 
-    init(gridSize: String = "small4x4", currentPlayerIndex: Int = 0, playerResults: [MGPlayerResult] = [], isFinished: Bool = false) {
+    init(gridSize: String = "small4x4", currentPlayerIndex: Int = 0, playerResults: [MGPlayerResult] = [], isFinished: Bool = false, spectator: MGSpectatorSnapshot? = nil) {
         self.gridSize = gridSize
         self.currentPlayerIndex = currentPlayerIndex
         self.playerResults = playerResults
         self.isFinished = isFinished
+        self.spectator = spectator
     }
 
     var resolvedGridSize: MemoryGridSize {

@@ -13,6 +13,8 @@ final class MemoryGridViewModel {
     var isGameActive: Bool = false
     var isGameComplete: Bool = false
 
+    var onStateChange: (@MainActor () -> Void)?
+
     private var firstFlippedIndex: Int?
     private var timerTask: Task<Void, Never>?
 
@@ -52,6 +54,7 @@ final class MemoryGridViewModel {
         firstFlippedIndex = nil
         isResolving = false
         startTimer()
+        onStateChange?()
     }
 
     func flipTile(at index: Int) {
@@ -61,6 +64,7 @@ final class MemoryGridViewModel {
 
         tiles[index].isFlipped = true
         SoundManager.shared.playTileFlip()
+        onStateChange?()
 
         if let firstIndex = firstFlippedIndex {
             moveCount += 1
@@ -70,6 +74,7 @@ final class MemoryGridViewModel {
                 matchedPairs += 1
                 firstFlippedIndex = nil
                 SoundManager.shared.playMatch()
+                onStateChange?()
 
                 if matchedPairs >= totalPairs {
                     completeGame()
@@ -86,6 +91,7 @@ final class MemoryGridViewModel {
                     tiles[capturedSecond].isFlipped = false
                     isResolving = false
                     SoundManager.shared.playMismatch()
+                    onStateChange?()
                 }
             }
         } else {

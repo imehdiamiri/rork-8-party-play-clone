@@ -573,17 +573,70 @@ nonisolated struct SessionStateMGPlayerResultRecord: Codable, Hashable, Sendable
     }
 }
 
+nonisolated struct SessionStateMGSpectatorTileRecord: Codable, Hashable, Sendable {
+    let pairId: Int
+    let symbol: String
+    let colorIndex: Int
+    let isFlipped: Bool
+    let isMatched: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case pairId = "pair_id"
+        case symbol
+        case colorIndex = "color_index"
+        case isFlipped = "is_flipped"
+        case isMatched = "is_matched"
+    }
+}
+
+nonisolated struct SessionStateMGSpectatorRecord: Codable, Hashable, Sendable {
+    let playerID: UUID
+    let playerName: String
+    let tiles: [SessionStateMGSpectatorTileRecord]
+    let matchedPairs: Int
+    let moveCount: Int
+    let elapsedSeconds: Double
+
+    enum CodingKeys: String, CodingKey {
+        case playerID = "player_id"
+        case playerName = "player_name"
+        case tiles
+        case matchedPairs = "matched_pairs"
+        case moveCount = "move_count"
+        case elapsedSeconds = "elapsed_seconds"
+    }
+}
+
 nonisolated struct SessionStateMemoryGridRecord: Codable, Hashable, Sendable {
     let gridSize: String
     let currentPlayerIndex: Int
     let playerResults: [SessionStateMGPlayerResultRecord]
     let isFinished: Bool
+    let spectator: SessionStateMGSpectatorRecord?
+
+    init(gridSize: String, currentPlayerIndex: Int, playerResults: [SessionStateMGPlayerResultRecord], isFinished: Bool, spectator: SessionStateMGSpectatorRecord? = nil) {
+        self.gridSize = gridSize
+        self.currentPlayerIndex = currentPlayerIndex
+        self.playerResults = playerResults
+        self.isFinished = isFinished
+        self.spectator = spectator
+    }
 
     enum CodingKeys: String, CodingKey {
         case gridSize = "grid_size"
         case currentPlayerIndex = "current_player_index"
         case playerResults = "player_results"
         case isFinished = "is_finished"
+        case spectator
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        gridSize = try container.decode(String.self, forKey: .gridSize)
+        currentPlayerIndex = try container.decode(Int.self, forKey: .currentPlayerIndex)
+        playerResults = try container.decode([SessionStateMGPlayerResultRecord].self, forKey: .playerResults)
+        isFinished = try container.decode(Bool.self, forKey: .isFinished)
+        spectator = try container.decodeIfPresent(SessionStateMGSpectatorRecord.self, forKey: .spectator)
     }
 }
 

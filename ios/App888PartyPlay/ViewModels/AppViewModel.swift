@@ -1103,7 +1103,7 @@ final class AppViewModel {
         let newResults = state.playerResults + [result]
         let nextIndex = state.currentPlayerIndex + 1
         let finished = nextIndex >= session.players.count
-        let newState = MemoryGridGameState(gridSize: state.gridSize, currentPlayerIndex: nextIndex, playerResults: newResults, isFinished: finished)
+        let newState = MemoryGridGameState(gridSize: state.gridSize, currentPlayerIndex: nextIndex, playerResults: newResults, isFinished: finished, spectator: nil)
         if finished {
             let scores = buildMGFinalScores(session: session, state: newState)
             let updatedPlayers = session.players.map { p in
@@ -1113,6 +1113,42 @@ final class AppViewModel {
         } else {
             updateSession(copying: session, memoryGridState: newState)
         }
+        rebroadcastCurrentCasualSessionState()
+    }
+
+    func broadcastMemoryGridSpectatorState(tiles: [MemoryTile], matchedPairs: Int, moveCount: Int, elapsedSeconds: Double) {
+        guard let session = activeSession,
+              let state = session.memoryGridState,
+              let pid = sessionPlayerID else { return }
+        guard state.currentPlayerIndex < session.players.count,
+              session.players[state.currentPlayerIndex].id == pid else { return }
+        let playerName = session.players.first(where: { $0.id == pid })?.username ?? "Player"
+        let snap = MGSpectatorSnapshot(
+            playerID: pid,
+            playerName: playerName,
+            tiles: tiles.map { MGSpectatorTile(pairId: $0.pairId, symbol: $0.symbol, colorIndex: $0.colorIndex, isFlipped: $0.isFlipped, isMatched: $0.isMatched) },
+            matchedPairs: matchedPairs,
+            moveCount: moveCount,
+            elapsedSeconds: elapsedSeconds
+        )
+        let newState = MemoryGridGameState(gridSize: state.gridSize, currentPlayerIndex: state.currentPlayerIndex, playerResults: state.playerResults, isFinished: state.isFinished, spectator: snap)
+        let newSession = GameSession(
+            id: session.id, game: session.game, mode: session.mode, roomCode: session.roomCode,
+            players: session.players, rounds: session.rounds, currentRoundIndex: session.currentRoundIndex,
+            phase: session.phase, secondsRemaining: session.secondsRemaining,
+            latestAwardedPoints: session.latestAwardedPoints, latestFeedback: session.latestFeedback,
+            results: session.results, liveState: session.liveState,
+            fakeAnswerState: session.fakeAnswerState, passGuessState: session.passGuessState,
+            guessTheSecondsState: session.guessTheSecondsState, memoryGridState: newState,
+            memoryPathState: session.memoryPathState, tapInOrderState: session.tapInOrderState,
+            colorTrapState: session.colorTrapState
+        )
+        activeSession = newSession
+        guard let service = casualRoomService, session.roomCode != nil else { return }
+        let record = makeSessionStateRecord(from: newSession)
+        let origin = casualSessionOriginPlayerID ?? pid
+        let payload = CasualGameStatePayload(sessionId: session.id.uuidString, originPlayerId: origin.uuidString, state: record)
+        Task { await service.broadcastGameState(payload) }
     }
 
     private func buildMGFinalScores(session: GameSession, state: MemoryGridGameState) -> [UUID: Int] {
@@ -2085,7 +2121,17 @@ final class AppViewModel {
                     gridSize: mg.gridSize,
                     currentPlayerIndex: mg.currentPlayerIndex,
                     playerResults: mg.playerResults.map { SessionStateMGPlayerResultRecord(id: $0.id, playerID: $0.playerID, playerName: $0.playerName, elapsedSeconds: $0.elapsedSeconds, moveCount: $0.moveCount) },
-                    isFinished: mg.isFinished
+                    isFinished: mg.isFinished,
+                    spectator: mg.spectator.map { snap in
+                        SessionStateMGSpectatorRecord(
+                            playerID: snap.playerID,
+                            playerName: snap.playerName,
+                            tiles: snap.tiles.map { SessionStateMGSpectatorTileRecord(pairId: $0.pairId, symbol: $0.symbol, colorIndex: $0.colorIndex, isFlipped: $0.isFlipped, isMatched: $0.isMatched) },
+                            matchedPairs: snap.matchedPairs,
+                            moveCount: snap.moveCount,
+                            elapsedSeconds: snap.elapsedSeconds
+                        )
+                    }
                 )
             },
             memoryPathState: session.memoryPathState.map { mp in
@@ -2203,7 +2249,17 @@ final class AppViewModel {
                     gridSize: mg.gridSize,
                     currentPlayerIndex: mg.currentPlayerIndex,
                     playerResults: mg.playerResults.map { MGPlayerResult(id: $0.id, playerID: $0.playerID, playerName: $0.playerName, elapsedSeconds: $0.elapsedSeconds, moveCount: $0.moveCount) },
-                    isFinished: mg.isFinished
+                    isFinished: mg.isFinished,
+                    spectator: mg.spectator.map { snap in
+                        MGSpectatorSnapshot(
+                            playerID: snap.playerID,
+                            playerName: snap.playerName,
+                            tiles: snap.tiles.map { MGSpectatorTile(pairId: $0.pairId, symbol: $0.symbol, colorIndex: $0.colorIndex, isFlipped: $0.isFlipped, isMatched: $0.isMatched) },
+                            matchedPairs: snap.matchedPairs,
+                            moveCount: snap.moveCount,
+                            elapsedSeconds: snap.elapsedSeconds
+                        )
+                    }
                 )
             },
             memoryPathState: state.memoryPathState.map { mp in

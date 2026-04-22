@@ -47,7 +47,21 @@ struct MemoryGridSessionView: View {
             tip: "Flip two tiles at a time. Match every pair as fast as you can.",
             accent: .cyan
         )
+        .onAppear {
+            if isMultiDevice {
+                viewModel.onStateChange = { [weak appModel, weak viewModel] in
+                    guard let appModel, let viewModel else { return }
+                    appModel.broadcastMemoryGridSpectatorState(
+                        tiles: viewModel.tiles,
+                        matchedPairs: viewModel.matchedPairs,
+                        moveCount: viewModel.moveCount,
+                        elapsedSeconds: viewModel.elapsedSeconds
+                    )
+                }
+            }
+        }
         .onDisappear {
+            viewModel.onStateChange = nil
             viewModel.cleanup()
         }
     }
@@ -145,13 +159,18 @@ struct MemoryGridSessionView: View {
                     .symbolEffect(.pulse, options: .repeating)
                 Text("Waiting for \(turnPlayerName ?? "player")...")
                     .font(.title2.weight(.bold))
-                Text("They are playing their turn on their device.")
+                Text("Watch their board live, in black & white.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
-                spectatorGridPreview(gridSize: mg.resolvedGridSize)
-                    .padding(.horizontal, 16)
+                if let snap = mg.spectator {
+                    spectatorLiveGrid(snap: snap, gridSize: mg.resolvedGridSize)
+                        .padding(.horizontal, 16)
+                } else {
+                    spectatorGridPreview(gridSize: mg.resolvedGridSize)
+                        .padding(.horizontal, 16)
+                }
 
                 if !mg.playerResults.isEmpty {
                     SurfaceCard {
@@ -182,6 +201,85 @@ struct MemoryGridSessionView: View {
             }
             .padding(.horizontal, 16)
         }
+    }
+
+    private func spectatorLiveGrid(snap: MGSpectatorSnapshot, gridSize: MemoryGridSize) -> some View {
+        let cols = gridSize.cols
+        let rows = gridSize.rows
+        let spacing: CGFloat = 8
+        let columns = Array(repeating: GridItem(.flexible(), spacing: spacing), count: cols)
+
+        return SurfaceCard {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeaderView(title: "Spectator View", subtitle: "\(snap.playerName)'s live board — \(snap.matchedPairs)/\(gridSize.pairCount) pairs · \(snap.moveCount) moves · \(String(format: "%.1fs", snap.elapsedSeconds))")
+                GeometryReader { geo in
+                    let availableWidth = geo.size.width - CGFloat(cols - 1) * spacing
+                    let tileWidth = availableWidth / CGFloat(cols)
+                    let availableHeight = geo.size.height - CGFloat(rows - 1) * spacing
+                    let tileHeight = availableHeight / CGFloat(rows)
+                    let tileSize = min(tileWidth, tileHeight)
+
+                    LazyVGrid(columns: columns, spacing: spacing) {
+                        ForEach(Array(snap.tiles.enumerated()), id: \.offset) { _, tile in
+                            spectatorTileView(tile: tile)
+                                .frame(height: tileSize)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(height: min(CGFloat(rows) * 68, 360))
+            }
+        }
+        .saturation(0)
+    }
+
+    private func spectatorTileView(tile: MGSpectatorTile) -> some View {
+        let isShowing = tile.isFlipped || tile.isMatched
+        return ZStack {
+            if isShowing {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(tile.isMatched ? 0.35 : 0.55),
+                                Color.white.opacity(tile.isMatched ? 0.2 : 0.32)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay {
+                        Image(systemName: tile.symbol)
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(.white)
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(.white.opacity(0.4), lineWidth: 1.5)
+                    }
+                    .opacity(tile.isMatched ? 0.6 : 1)
+            } else {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(
+                        LinearGradient(
+                            colors: [.white.opacity(0.18), .white.opacity(0.08)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay {
+                        Image(systemName: "questionmark")
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(.white.opacity(0.16), lineWidth: 1.5)
+                    }
+            }
+        }
+        .animation(.spring(duration: 0.35, bounce: 0.1), value: tile.isFlipped)
+        .animation(.spring(duration: 0.35, bounce: 0.1), value: tile.isMatched)
     }
 
     private func spectatorGridPreview(gridSize: MemoryGridSize) -> some View {
@@ -284,6 +382,20 @@ struct MemoryGridSessionView: View {
         appModel.submitMemoryGridResult(elapsedSeconds: viewModel.elapsedSeconds, moveCount: viewModel.moveCount)
         viewModel.resetGame()
         gamePhase = .ready
+    }
+
+    private func statBubble(title: String, subtitle: String) -> some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.headline.weight(.bold))
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(minWidth: 60)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 14)
+        .background(.white.opacity(0.05), in: .rect(cornerRadius: 14))
     }
 
     private var readyView: some View {
@@ -559,20 +671,6 @@ struct MemoryGridSessionView: View {
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(rank == 1 ? .yellow.opacity(0.2) : .white.opacity(0.04))
         }
-    }
-
-    private func statBubble(title: String, subtitle: String) -> some View {
-        VStack(spacing: 4) {
-            Text(title)
-                .font(.headline.weight(.bold))
-            Text(subtitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(minWidth: 60)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 14)
-        .background(.white.opacity(0.05), in: .rect(cornerRadius: 14))
     }
 
     private func handlePlayerComplete() {
