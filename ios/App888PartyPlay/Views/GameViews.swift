@@ -464,7 +464,7 @@ struct WaitingRoomView: View {
                         tint: .blue
                     )
 
-                    ShareLink(item: "Join my 888PartyPlay \(room.game.name) room! Code: \(room.code)") {
+                    ShareLink(item: "\(room.code)\n\nJoin me on 888PartyPlay to play together!\n(Game: \(room.game.name))") {
                         HStack(spacing: 8) {
                             Image(systemName: "square.and.arrow.up")
                                 .font(.subheadline.weight(.semibold))
