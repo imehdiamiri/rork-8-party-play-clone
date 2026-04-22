@@ -23,6 +23,9 @@ final class MultiplayerRoomEngine {
     let spectator: MultiplayerSpectatorSyncManager
     let reducer: MultiplayerEventReducer
     let reconciler: MultiplayerSnapshotReconciler
+    let timer: MultiplayerTimerCoordinator
+    let inactivity: MultiplayerHostInactivityMonitor
+    let revalidator: MultiplayerForegroundRevalidator
 
     private let roomService: CasualRoomService
     private var reconcileTask: Task<Void, Never>?
@@ -36,6 +39,9 @@ final class MultiplayerRoomEngine {
         self.reconnect = MultiplayerReconnectManager(roomService: roomService)
         self.hostAuthority = MultiplayerHostAuthorityManager()
         self.spectator = MultiplayerSpectatorSyncManager()
+        self.timer = MultiplayerTimerCoordinator()
+        self.inactivity = MultiplayerHostInactivityMonitor()
+        self.revalidator = MultiplayerForegroundRevalidator(roomService: roomService)
     }
 
     // Bootstrap an initial snapshot from a freshly created/joined room.
@@ -122,6 +128,41 @@ final class MultiplayerRoomEngine {
         reconcileTask = nil
         snapshot = nil
         connectionState = .idle
+        timer.stop()
+        inactivity.stop()
+    }
+
+    // MARK: - Foreground revalidation entry point
+    /// Call when the app returns to foreground OR after a reconnect.
+    /// Validates the room still exists, the local player is still in it, the
+    /// phase is current, and the local state revision is fresh. If stale, the
+    /// local snapshot is replaced by the authoritative one.
+    @discardableResult
+    func revalidateOnForeground(localPlayerID: UUID) async -> MultiplayerRevalidationResult {
+        guard let current = snapshot else { return .roomMissing }
+        connectionState = .reconnecting
+        let result = await revalidator.revalidate(
+            localSnapshot: current,
+            localPlayerID: localPlayerID
+        )
+        switch result {
+        case .valid:
+            connectionState = .connected
+        case .staleButRecovered(let fresh):
+            snapshot = fresh
+            readyCheck.rehydrate(from: fresh)
+            connectionState = .connected
+        case .playerRemoved:
+            connectionState = .disconnected
+        case .roomClosed:
+            setPhase(.closed)
+            connectionState = .disconnected
+        case .roomMissing:
+            connectionState = .disconnected
+        case .failed:
+            connectionState = .stale
+        }
+        return result.publicResult
     }
 }
 
@@ -339,6 +380,180 @@ final class MultiplayerSpectatorSyncManager {
     func reset() {
         lastFrame = [:]
         lastFrameAt = nil
+    }
+}
+
+// MARK: - Authoritative Timer Coordinator
+
+@Observable
+@MainActor
+final class MultiplayerTimerCoordinator {
+    var snapshot: MultiplayerTimerSnapshot?
+    var displayRemaining: Int = 0
+    private var tickTask: Task<Void, Never>?
+
+    /// Host-only: start a new round timer.
+    func hostStart(duration: Int) {
+        let snap = MultiplayerTimerSnapshot.start(duration: duration)
+        snapshot = snap
+        displayRemaining = duration
+        startTicking()
+    }
+
+    /// Host-only: pause the timer (e.g. backgrounded).
+    func hostPause() {
+        guard let s = snapshot else { return }
+        snapshot = s.paused()
+        displayRemaining = snapshot?.remaining() ?? 0
+        tickTask?.cancel()
+        tickTask = nil
+    }
+
+    /// Host-only: resume after pause.
+    func hostResume() {
+        guard let s = snapshot else { return }
+        snapshot = s.resumed()
+        displayRemaining = snapshot?.remaining() ?? 0
+        startTicking()
+    }
+
+    /// Any client: adopt authoritative timer snapshot (from DB or broadcast).
+    /// Used to resync drift and to restore after foreground.
+    func adopt(_ snap: MultiplayerTimerSnapshot) {
+        if let existing = snapshot, snap.revision < existing.revision { return }
+        snapshot = snap
+        displayRemaining = snap.remaining()
+        if snap.isPaused {
+            tickTask?.cancel()
+            tickTask = nil
+        } else {
+            startTicking()
+        }
+    }
+
+    func stop() {
+        tickTask?.cancel()
+        tickTask = nil
+        snapshot = nil
+        displayRemaining = 0
+    }
+
+    private func startTicking() {
+        tickTask?.cancel()
+        tickTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled, let self else { return }
+                guard let s = self.snapshot, !s.isPaused else { return }
+                self.displayRemaining = s.remaining()
+                if self.displayRemaining == 0 { return }
+            }
+        }
+    }
+}
+
+// MARK: - Host Inactivity Monitor
+
+@Observable
+@MainActor
+final class MultiplayerHostInactivityMonitor {
+    var lastHostSeenAt: Date = Date()
+    var outcome: HostInactivityPolicy.Outcome = .healthy
+    var policy: HostInactivityPolicy = .default
+    private var watchTask: Task<Void, Never>?
+
+    func noteHostSeen(_ date: Date = Date()) {
+        lastHostSeenAt = date
+        if outcome != .healthy { outcome = .healthy }
+    }
+
+    func start(phaseProvider: @MainActor @escaping () -> MultiplayerPhase,
+               onChange: @MainActor @escaping (HostInactivityPolicy.Outcome) -> Void) {
+        stop()
+        watchTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled, let self else { return }
+                let phase = phaseProvider()
+                let next = self.policy.evaluate(lastSeen: self.lastHostSeenAt, phase: phase)
+                if next != self.outcome {
+                    self.outcome = next
+                    onChange(next)
+                }
+            }
+        }
+    }
+
+    func stop() {
+        watchTask?.cancel()
+        watchTask = nil
+    }
+}
+
+// MARK: - Foreground Revalidator
+
+nonisolated enum _ForegroundRevalidationInternal: Sendable {
+    case valid
+    case staleButRecovered(MultiplayerSessionSnapshot)
+    case playerRemoved
+    case roomClosed
+    case roomMissing
+    case failed(String)
+
+    var publicResult: MultiplayerRevalidationResult {
+        switch self {
+        case .valid: return .valid
+        case .staleButRecovered: return .staleButRecovered
+        case .playerRemoved: return .playerRemoved
+        case .roomClosed: return .roomClosed
+        case .roomMissing: return .roomMissing
+        case .failed(let s): return .failed(s)
+        }
+    }
+}
+
+@MainActor
+final class MultiplayerForegroundRevalidator {
+    private let roomService: CasualRoomService
+
+    init(roomService: CasualRoomService) {
+        self.roomService = roomService
+    }
+
+    func revalidate(localSnapshot: MultiplayerSessionSnapshot, localPlayerID: UUID) async -> _ForegroundRevalidationInternal {
+        do {
+            let (record, players) = try await roomService.fetchRoomFromDB(roomID: localSnapshot.roomID)
+            let status = CasualRoomStatus(rawValue: record.status) ?? .waiting
+            if status == .closed { return .roomClosed }
+            guard players.contains(where: { $0.guestPlayerId == localPlayerID && $0.isConnected }) else {
+                return .playerRemoved
+            }
+            let phase: MultiplayerPhase = {
+                switch status {
+                case .waiting, .full: return .lobby
+                case .starting: return .starting
+                case .inProgress: return .inProgress
+                case .closed: return .closed
+                }
+            }()
+            let hostID = players.first(where: \.isHost)?.guestPlayerId ?? localSnapshot.hostPlayerID
+            let required = Set(players.filter(\.isConnected).map(\.guestPlayerId))
+            let phaseChanged = phase != localSnapshot.phase
+            let hostChanged = hostID != localSnapshot.hostPlayerID
+            let requiredChanged = required != localSnapshot.requiredPlayerIDs
+            if !phaseChanged && !hostChanged && !requiredChanged {
+                return .valid
+            }
+            var updated = localSnapshot
+            updated.phase = phase
+            updated.hostPlayerID = hostID
+            updated.requiredPlayerIDs = required
+            updated.updatedAt = Date()
+            updated.revision += 1
+            return .staleButRecovered(updated)
+        } catch {
+            return .failed(error.localizedDescription)
+        }
     }
 }
 

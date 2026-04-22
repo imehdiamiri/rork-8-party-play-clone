@@ -76,6 +76,110 @@ struct TapInOrderViewModelTests {
     }
 }
 
+struct MultiplayerTimerTests {
+    @Test func startProducesRunningSnapshot() {
+        let now = Date(timeIntervalSince1970: 1000)
+        let s = MultiplayerTimerSnapshot.start(duration: 30, now: now)
+        #expect(!s.isPaused)
+        #expect(s.durationSeconds == 30)
+        #expect(s.remaining(now: now) == 30)
+        #expect(s.remaining(now: now.addingTimeInterval(10)) == 20)
+    }
+
+    @Test func pauseFreezesRemaining() {
+        let now = Date(timeIntervalSince1970: 2000)
+        let s = MultiplayerTimerSnapshot.start(duration: 60, now: now)
+        let at15 = now.addingTimeInterval(15)
+        let paused = s.paused(now: at15)
+        #expect(paused.isPaused)
+        #expect(paused.pausedRemaining == 45)
+        // Time passes while paused — remaining unchanged.
+        #expect(paused.remaining(now: at15.addingTimeInterval(120)) == 45)
+    }
+
+    @Test func resumeRestartsCountdown() {
+        let now = Date(timeIntervalSince1970: 3000)
+        let s = MultiplayerTimerSnapshot.start(duration: 60, now: now).paused(now: now.addingTimeInterval(10))
+        let resumedAt = now.addingTimeInterval(300)
+        let resumed = s.resumed(now: resumedAt)
+        #expect(!resumed.isPaused)
+        #expect(resumed.remaining(now: resumedAt) == 50)
+        #expect(resumed.remaining(now: resumedAt.addingTimeInterval(20)) == 30)
+    }
+
+    @Test func revisionIncrementsOnPauseAndResume() {
+        let s0 = MultiplayerTimerSnapshot.start(duration: 10)
+        let s1 = s0.paused()
+        let s2 = s1.resumed()
+        #expect(s1.revision == s0.revision + 1)
+        #expect(s2.revision == s1.revision + 1)
+    }
+}
+
+struct HostInactivityPolicyTests {
+    private let base = Date(timeIntervalSince1970: 10_000)
+
+    @Test func shortBackgroundIsHealthy() {
+        let policy = HostInactivityPolicy.default
+        let r = policy.evaluate(lastSeen: base, now: base.addingTimeInterval(5), phase: .inProgress)
+        #expect(r == .healthy)
+    }
+
+    @Test func thirtySecondsIsSoftDegraded() {
+        let policy = HostInactivityPolicy.default
+        let r = policy.evaluate(lastSeen: base, now: base.addingTimeInterval(30), phase: .inProgress)
+        #expect(r == .softDegraded)
+    }
+
+    @Test func twoMinutesPromotesInGame() {
+        let policy = HostInactivityPolicy.default
+        let r = policy.evaluate(lastSeen: base, now: base.addingTimeInterval(130), phase: .inProgress)
+        #expect(r == .promoteNewHost)
+    }
+
+    @Test func twoMinutesInEmptyLobbyCloses() {
+        let policy = HostInactivityPolicy.default
+        let r = policy.evaluate(lastSeen: base, now: base.addingTimeInterval(130), phase: .lobby)
+        #expect(r == .closeRoom)
+    }
+
+    @Test func killedAppEventuallyCloses() {
+        let policy = HostInactivityPolicy.default
+        let r = policy.evaluate(lastSeen: base, now: base.addingTimeInterval(900), phase: .inProgress)
+        #expect(r == .closeRoom)
+    }
+}
+
+@MainActor
+struct MultiplayerTimerCoordinatorTests {
+    @Test func hostStartSetsDisplay() {
+        let t = MultiplayerTimerCoordinator()
+        t.hostStart(duration: 20)
+        #expect(t.snapshot != nil)
+        #expect(t.displayRemaining == 20)
+    }
+
+    @Test func adoptAdvancesRevisionOnly() {
+        let t = MultiplayerTimerCoordinator()
+        let snap = MultiplayerTimerSnapshot.start(duration: 45)
+        t.adopt(snap)
+        #expect(t.snapshot?.revision == snap.revision)
+        // Older revision should not replace.
+        var older = snap
+        older.revision = -1
+        t.adopt(older)
+        #expect(t.snapshot?.revision == snap.revision)
+    }
+
+    @Test func stopClearsSnapshot() {
+        let t = MultiplayerTimerCoordinator()
+        t.hostStart(duration: 10)
+        t.stop()
+        #expect(t.snapshot == nil)
+        #expect(t.displayRemaining == 0)
+    }
+}
+
 struct InviteURLMatchingTests {
     private func extract(_ s: String) -> String? {
         guard let url = URL(string: s) else { return nil }

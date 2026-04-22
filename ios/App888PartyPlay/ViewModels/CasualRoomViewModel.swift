@@ -18,6 +18,8 @@ final class CasualRoomViewModel {
     var hostLeft: Bool = false
     var waitingTooLong: Bool = false
     var isReconnecting: Bool = false
+    var isSyncing: Bool = false
+    var hostInactivityOutcome: HostInactivityPolicy.Outcome = .healthy
     var readyCheckActive: Bool = false
     var readyCheckLocalConfirmed: Bool = false
     var readyConfirmedPlayerIDs: Set<UUID> = []
@@ -77,24 +79,81 @@ final class CasualRoomViewModel {
     func handleScenePhaseChange(to phase: ScenePhase) {
         switch phase {
         case .background:
-            // Keep room alive in background. The OS may suspend us, but we do NOT
-            // tear down the heartbeat, watchdog, or room state. When the user comes
-            // back, the same room/game screen is still active. Only explicit
-            // leaveRoom() or host closing the room ends the session.
-            break
+            // Short background = keep room alive silently. Do NOT tear down state.
+            // Host pauses authoritative timer so guests won't advance past a dead host.
+            if isHost {
+                engine.timer.hostPause()
+            }
         case .active:
-            guard isConnected, let room, let token = localPlayer?.sessionToken, !token.isEmpty else { return }
-            isReconnecting = true
-            roomService.startHeartbeat(roomID: room.id, sessionToken: token)
+            guard isConnected, let room, let localPlayer, !localPlayer.sessionToken.isEmpty else { return }
+            isSyncing = true
+            roomService.startHeartbeat(roomID: room.id, sessionToken: localPlayer.sessionToken)
             startLobbyWatchdog()
             startWaitingTimer()
-            Task {
-                await refreshRoomFromDB()
-                isReconnecting = false
+            startHostInactivityMonitor()
+            Task { [weak self] in
+                guard let self else { return }
+                // Authoritative revalidation before restoring UI.
+                let result = await self.engine.revalidateOnForeground(localPlayerID: localPlayer.id)
+                switch result {
+                case .valid:
+                    break
+                case .staleButRecovered:
+                    await self.refreshRoomFromDB()
+                case .playerRemoved:
+                    self.wasKicked = true
+                    self.disconnect()
+                case .roomClosed:
+                    if !self.isHost { self.hostLeft = true }
+                    self.roomClosed = true
+                    self.disconnect()
+                case .roomMissing:
+                    self.roomClosed = true
+                    self.disconnect()
+                case .failed:
+                    await self.refreshRoomFromDB()
+                }
+                // Host resumes the timer on foreground.
+                if self.isHost {
+                    self.engine.timer.hostResume()
+                }
+                self.isSyncing = false
+                self.isReconnecting = false
             }
         default:
             break
         }
+    }
+
+    private func startHostInactivityMonitor() {
+        engine.inactivity.start(
+            phaseProvider: { [weak self] in
+                self?.engine.snapshot?.phase ?? .lobby
+            },
+            onChange: { [weak self] outcome in
+                guard let self else { return }
+                self.hostInactivityOutcome = outcome
+                switch outcome {
+                case .healthy, .softDegraded:
+                    break
+                case .promoteNewHost:
+                    self.attemptHostPromotion()
+                case .closeRoom:
+                    if !self.isHost {
+                        self.hostLeft = true
+                        self.disconnect()
+                    }
+                }
+            }
+        )
+    }
+
+    private func attemptHostPromotion() {
+        guard let room else { return }
+        guard let proposed = engine.hostAuthority.proposeNewHost(from: room.players) else { return }
+        guard proposed == localPlayer?.id else { return }
+        // The earliest connected non-host player locally promotes itself.
+        engine.hostAuthority.setHost(proposed)
     }
 
     func tryAutoRejoin() {
@@ -164,6 +223,8 @@ final class CasualRoomViewModel {
                 roomService.startHeartbeat(roomID: created.id, sessionToken: token)
                 startLobbyWatchdog()
                 startWaitingTimer()
+                startHostInactivityMonitor()
+                engine.inactivity.noteHostSeen()
             } catch {
                 errorMessage = error.localizedDescription
                 localPlayer = nil
@@ -215,6 +276,8 @@ final class CasualRoomViewModel {
                 roomService.startHeartbeat(roomID: joined.id, sessionToken: token)
                 startLobbyWatchdog()
                 startWaitingTimer()
+                startHostInactivityMonitor()
+                engine.inactivity.noteHostSeen()
             } catch {
                 errorMessage = error.localizedDescription
                 localPlayer = nil
@@ -558,6 +621,9 @@ final class CasualRoomViewModel {
             }
             if let hostID = players.first(where: \.isHost)?.id {
                 engine.hostAuthority.setHost(hostID)
+                if players.first(where: { $0.id == hostID })?.isConnected == true {
+                    engine.inactivity.noteHostSeen()
+                }
             }
         } catch {
             errorMessage = "Connection lost. Reconnecting…"
