@@ -95,35 +95,10 @@ struct TapInOrderSessionView: View {
                         if done { handleMultiComplete() }
                     }
             } else if isMyTurn {
-                multiAutoStartView(state: state)
+                multiReadyView(state: state, players: currentSession.players)
             } else {
                 multiWaitingView(state: state, turnName: turnName, players: currentSession.players)
             }
-        }
-    }
-
-    private func multiAutoStartView(state: TapInOrderGameState) -> some View {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: state.resolvedVariant.icon)
-                .font(.system(size: 64, weight: .bold))
-                .foregroundStyle(.orange)
-                .symbolEffect(.pulse, options: .repeating)
-            Text("Your Turn!")
-                .font(.title.weight(.bold))
-                .foregroundStyle(.green)
-            Text("Get ready...")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task(id: state.currentPlayerIndex) {
-            try? await Task.sleep(for: .milliseconds(900))
-            guard !Task.isCancelled else { return }
-            FeedbackService.shared.playRoundStart()
-            viewModel.start(variant: state.resolvedVariant, gridSize: state.gridSize, tileCount: state.tileCount, seed: state.seed, providedCells: state.selectedCells)
-            withAnimation(.spring(duration: 0.4)) { gamePhase = .playing }
         }
     }
 
@@ -137,9 +112,12 @@ struct TapInOrderSessionView: View {
                     .frame(width: 100, height: 100)
                     .background(.orange.opacity(0.14), in: .rect(cornerRadius: 28))
                 VStack(spacing: 8) {
-                    Text("Your Turn!")
+                    Text("Your Turn! Start")
                         .font(.title2.weight(.bold))
                         .foregroundStyle(.green)
+                    Text("Tap Start to begin your turn.")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
                     Text(state.resolvedVariant.subtitle)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)

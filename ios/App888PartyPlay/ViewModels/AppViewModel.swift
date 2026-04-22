@@ -644,6 +644,9 @@ final class AppViewModel {
         casualSessionRoomID = roomID
         casualSessionToken = sessionToken
         casualRoomCleanupHandler = cleanup
+        if let localPlayerID {
+            sessionOverridePlayerID = localPlayerID
+        }
     }
 
     func detachCasualRoomService() {

@@ -88,34 +88,10 @@ struct MemoryPathSessionView: View {
                     multiTurnCompleteView(mp: mp)
                 }
             } else if isMyTurn {
-                multiAutoStartView(mp: mp)
+                multiReadyView(mp: mp, players: currentSession.players)
             } else {
                 multiWaitingView(mp: mp, turnPlayerName: turnPlayerName, players: currentSession.players)
             }
-        }
-    }
-
-    private func multiAutoStartView(mp: MemoryPathGameState) -> some View {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: "map.fill")
-                .font(.system(size: 64, weight: .bold))
-                .foregroundStyle(.teal)
-                .symbolEffect(.pulse, options: .repeating)
-            Text("Your Turn!")
-                .font(.title.weight(.bold))
-                .foregroundStyle(.green)
-            Text("Get ready...")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task(id: mp.currentPlayerIndex) {
-            try? await Task.sleep(for: .milliseconds(900))
-            guard !Task.isCancelled else { return }
-            FeedbackService.shared.playRoundStart()
-            startMultiTurn(mp: mp)
         }
     }
 
@@ -129,16 +105,16 @@ struct MemoryPathSessionView: View {
                     .frame(width: 100, height: 100)
                     .background(.teal.opacity(0.14), in: .rect(cornerRadius: 28))
                 VStack(spacing: 8) {
+                    Text("Your Turn! Start")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.green)
                     if let name = appModel.currentTurnPlayerName(in: appModel.activeSession ?? session) {
                         CurrentTurnPill(playerName: name, prefix: "Now", accent: .green)
-                    } else {
-                        Text("Your Turn!")
-                            .font(.title2.weight(.bold))
-                            .foregroundStyle(.green)
                     }
-                    Text("Find the hidden path from start to end.")
+                    Text("Tap Start to begin your turn and find the hidden path from start to end.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
                 HStack(spacing: 16) {
                     mpStatBubble(title: "\(mp.gridSize)×\(mp.gridSize)", subtitle: "Grid")

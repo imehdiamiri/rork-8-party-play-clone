@@ -82,35 +82,10 @@ struct ColorTrapSessionView: View {
                         if done { handleMultiComplete() }
                     }
             } else if isMyTurn {
-                multiAutoStartView(state: state)
+                multiReadyView(state: state)
             } else {
                 multiWaitingView(state: state, turnName: turnName)
             }
-        }
-    }
-
-    private func multiAutoStartView(state: ColorTrapGameState) -> some View {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: "paintpalette.fill")
-                .font(.system(size: 64, weight: .bold))
-                .foregroundStyle(.pink)
-                .symbolEffect(.pulse, options: .repeating)
-            Text("Your Turn!")
-                .font(.title.weight(.bold))
-                .foregroundStyle(.green)
-            Text("Get ready...")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task(id: state.currentPlayerIndex) {
-            try? await Task.sleep(for: .milliseconds(900))
-            guard !Task.isCancelled else { return }
-            FeedbackService.shared.playRoundStart()
-            viewModel.start(difficulty: state.resolvedDifficulty, seed: state.seed, forbiddenColorIndex: state.forbiddenColorIndex)
-            withAnimation(.spring(duration: 0.4)) { gamePhase = .playing }
         }
     }
 
@@ -125,12 +100,13 @@ struct ColorTrapSessionView: View {
                     .frame(width: 100, height: 100)
                     .background(.pink.opacity(0.14), in: .rect(cornerRadius: 28))
                 VStack(spacing: 8) {
-                    Text("Your Turn!")
+                    Text("Your Turn! Start")
                         .font(.title2.weight(.bold))
                         .foregroundStyle(.green)
-                    Text("Tap every color EXCEPT the one below.")
+                    Text("Tap Start to begin your turn, then tap every color EXCEPT the one below.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
                 forbiddenPreview(color: forbidden)
                 HStack(spacing: 16) {

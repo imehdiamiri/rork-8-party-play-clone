@@ -109,36 +109,43 @@ struct MemoryGridSessionView: View {
                     }
                 }
             } else if isMyTurn {
-                multiAutoStartView(gridSize: gridSize, turnIndex: mg.currentPlayerIndex)
+                ScrollView {
+                    VStack(spacing: 24) {
+                        Spacer(minLength: 40)
+                        Image(systemName: "square.grid.3x3.fill")
+                            .font(.system(size: 52, weight: .semibold))
+                            .foregroundStyle(.cyan)
+                            .frame(width: 100, height: 100)
+                            .background(.cyan.opacity(0.14), in: .rect(cornerRadius: 28))
+                        VStack(spacing: 8) {
+                            Text("Your Turn! Start")
+                                .font(.title2.weight(.bold))
+                                .foregroundStyle(.green)
+                            Text("Tap Start to begin your turn and find all matching pairs as fast as you can.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        HStack(spacing: 16) {
+                            statBubble(title: gridSize.title, subtitle: "Grid")
+                            statBubble(title: "\(gridSize.pairCount)", subtitle: "Pairs")
+                            statBubble(title: "\(mg.currentPlayerIndex + 1)/\(currentSession.players.count)", subtitle: "Player")
+                        }
+                        Button("Start") {
+                            FeedbackService.shared.playRoundStart()
+                            viewModel.startGame(size: gridSize)
+                            withAnimation(.spring(duration: 0.4)) {
+                                gamePhase = .playing
+                            }
+                        }
+                        .buttonStyle(PrimaryActionButtonStyle())
+                        .padding(.horizontal, 40)
+                        Spacer(minLength: 40)
+                    }
+                    .padding(.horizontal, 16)
+                }
             } else {
                 multiWaitingView(mg: mg, turnPlayerName: turnPlayerName, players: currentSession.players)
-            }
-        }
-    }
-
-    private func multiAutoStartView(gridSize: MemoryGridSize, turnIndex: Int) -> some View {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: "square.grid.3x3.fill")
-                .font(.system(size: 64, weight: .bold))
-                .foregroundStyle(.cyan)
-                .symbolEffect(.pulse, options: .repeating)
-            Text("Your Turn!")
-                .font(.title.weight(.bold))
-                .foregroundStyle(.green)
-            Text("Get ready...")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task(id: turnIndex) {
-            try? await Task.sleep(for: .milliseconds(900))
-            guard !Task.isCancelled else { return }
-            FeedbackService.shared.playRoundStart()
-            viewModel.startGame(size: gridSize)
-            withAnimation(.spring(duration: 0.4)) {
-                gamePhase = .playing
             }
         }
     }
