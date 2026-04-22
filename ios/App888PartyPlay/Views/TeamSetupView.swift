@@ -64,6 +64,11 @@ struct TeamSetupView: View {
                 startGameSession()
             }
         }
+        .onChange(of: casualVM.shouldAutoDismissLobby) { _, shouldDismiss in
+            if shouldDismiss {
+                dismiss()
+            }
+        }
     }
 
     private var roomHeaderCard: some View {
@@ -388,13 +393,40 @@ struct TeamSetupView: View {
     private func startGameSession() {
         guard let room = casualVM.room else { return }
         let players = casualVM.buildPlayersForSession()
+        let localID = casualVM.localPlayer?.id
+
+        casualVM.onSessionEnded = { [weak appModel] in
+            appModel?.dismissSession()
+        }
+        casualVM.service.onGameStateSync = { [weak appModel] payload in
+            appModel?.applyRemoteCasualGameState(payload)
+        }
+        appModel.attachCasualRoomService(
+            casualVM.service,
+            localPlayerID: localID,
+            roomID: room.id,
+            sessionToken: casualVM.localPlayer?.sessionToken,
+            cleanup: {
+                casualVM.shouldAutoDismissLobby = true
+                casualVM.disconnect()
+            }
+        )
+
+        guard appModel.activeSession?.roomCode != room.code else { return }
+
         appModel.currentFakeAnswerSettings = casualVM.fakeAnswerSettings
         appModel.startCasualMultiplayerSession(
             game: room.gameType,
             mode: room.playMode,
             players: players,
             roomCode: room.code,
-            localPlayerID: casualVM.localPlayer?.id
+            localPlayerID: localID,
+            sessionID: room.id,
+            syncToPeers: casualVM.isHost
         )
+
+        if casualVM.isHost {
+            appModel.rebroadcastCurrentCasualSessionState()
+        }
     }
 }

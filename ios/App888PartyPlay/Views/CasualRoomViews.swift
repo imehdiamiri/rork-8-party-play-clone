@@ -352,6 +352,11 @@ struct HostLobbyView: View {
         .onChange(of: scenePhase) { _, newPhase in
             casualVM.handleScenePhaseChange(to: newPhase)
         }
+        .onChange(of: casualVM.shouldAutoDismissLobby) { _, shouldDismiss in
+            if shouldDismiss {
+                dismiss()
+            }
+        }
     }
 
     private var roomHeaderCard: some View {
@@ -559,22 +564,38 @@ fileprivate func startGameSession(appModel: AppViewModel, casualVM: CasualRoomVi
     guard let room = casualVM.room else { return }
     let players = casualVM.buildPlayersForSession()
     let localID = casualVM.localPlayer?.id
+
+    casualVM.onSessionEnded = { [weak appModel] in
+        appModel?.dismissSession()
+    }
     casualVM.service.onGameStateSync = { [weak appModel] payload in
         appModel?.applyRemoteCasualGameState(payload)
     }
-    appModel.attachCasualRoomService(casualVM.service, localPlayerID: localID)
+    appModel.attachCasualRoomService(
+        casualVM.service,
+        localPlayerID: localID,
+        roomID: room.id,
+        sessionToken: casualVM.localPlayer?.sessionToken,
+        cleanup: {
+            casualVM.shouldAutoDismissLobby = true
+            casualVM.disconnect()
+        }
+    )
+
     guard appModel.activeSession?.roomCode != room.code else { return }
-    let isHost = casualVM.isHost
-    if isHost {
-        appModel.startCasualMultiplayerSession(
-            game: room.gameType,
-            mode: room.playMode,
-            players: players,
-            roomCode: room.code,
-            localPlayerID: localID
-        )
-    } else {
-        appModel.sessionOverridePlayerID = localID
+
+    appModel.startCasualMultiplayerSession(
+        game: room.gameType,
+        mode: room.playMode,
+        players: players,
+        roomCode: room.code,
+        localPlayerID: localID,
+        sessionID: room.id,
+        syncToPeers: casualVM.isHost
+    )
+
+    if casualVM.isHost {
+        appModel.rebroadcastCurrentCasualSessionState()
     }
 }
 
@@ -647,6 +668,11 @@ struct GuestLobbyView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             casualVM.handleScenePhaseChange(to: newPhase)
+        }
+        .onChange(of: casualVM.shouldAutoDismissLobby) { _, shouldDismiss in
+            if shouldDismiss {
+                dismiss()
+            }
         }
     }
 

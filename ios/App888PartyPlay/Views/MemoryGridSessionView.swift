@@ -150,6 +150,9 @@ struct MemoryGridSessionView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
+                spectatorGridPreview(gridSize: mg.resolvedGridSize)
+                    .padding(.horizontal, 16)
+
                 if !mg.playerResults.isEmpty {
                     SurfaceCard {
                         VStack(alignment: .leading, spacing: 10) {
@@ -179,6 +182,52 @@ struct MemoryGridSessionView: View {
             }
             .padding(.horizontal, 16)
         }
+    }
+
+    private func spectatorGridPreview(gridSize: MemoryGridSize) -> some View {
+        let cols = gridSize.cols
+        let rows = gridSize.rows
+        let spacing: CGFloat = 8
+        let columns = Array(repeating: GridItem(.flexible(), spacing: spacing), count: cols)
+
+        return SurfaceCard {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeaderView(title: "Spectator View", subtitle: "The board stays visible in black and white until your turn.")
+                GeometryReader { geo in
+                    let availableWidth = geo.size.width - CGFloat(cols - 1) * spacing
+                    let tileWidth = availableWidth / CGFloat(cols)
+                    let availableHeight = geo.size.height - CGFloat(rows - 1) * spacing
+                    let tileHeight = availableHeight / CGFloat(rows)
+                    let tileSize = min(tileWidth, tileHeight)
+
+                    LazyVGrid(columns: columns, spacing: spacing) {
+                        ForEach(0..<(rows * cols), id: \.self) { _ in
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.18), .white.opacity(0.08)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .overlay {
+                                    Image(systemName: "questionmark")
+                                        .font(.title3.weight(.bold))
+                                        .foregroundStyle(.white.opacity(0.8))
+                                }
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .strokeBorder(.white.opacity(0.16), lineWidth: 1.5)
+                                }
+                                .frame(height: tileSize)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(height: min(CGFloat(rows) * 68, 320))
+            }
+        }
+        .saturation(0)
     }
 
     private func multiResultsView(mg: MemoryGridGameState, players: [PlayerProfile]) -> some View {

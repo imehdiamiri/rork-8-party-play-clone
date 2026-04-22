@@ -141,6 +141,9 @@ struct ColorTrapSessionView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
+                spectatorArenaPreview(state: state)
+                    .padding(.horizontal, 16)
+
                 if !state.playerResults.isEmpty {
                     SurfaceCard {
                         VStack(alignment: .leading, spacing: 10) {
@@ -167,6 +170,60 @@ struct ColorTrapSessionView: View {
             }
             .padding(.horizontal, 16)
         }
+    }
+
+    private func spectatorArenaPreview(state: ColorTrapGameState) -> some View {
+        let previewSpawns = Array(ColorTrapGenerator.generateSpawns(difficulty: state.resolvedDifficulty, seed: state.seed).prefix(8))
+        let forbidden = ColorTrapViewModel.palette[state.forbiddenColorIndex % ColorTrapViewModel.palette.count]
+
+        return SurfaceCard {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeaderView(title: "Spectator View", subtitle: "The live arena stays visible in black and white until your turn.")
+                HStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.white.opacity(0.7))
+                    Text("Forbidden")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(forbidden)
+                        .frame(width: 28, height: 20)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(.white.opacity(0.28))
+                        }
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.white.opacity(0.05), in: .rect(cornerRadius: 12))
+
+                GeometryReader { geo in
+                    let colWidth = geo.size.width / CGFloat(ColorTrapGenerator.columnCount)
+                    ZStack(alignment: .topLeading) {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.white.opacity(0.08))
+
+                        ForEach(previewSpawns, id: \.id) { spawn in
+                            let xCenter = colWidth * (CGFloat(spawn.columnIndex) + 0.5)
+                            let tileSize = min(colWidth * 0.78, 60) * CGFloat(spawn.size)
+                            let yOffset = (spawn.appearAt / max(state.resolvedDifficulty.totalDuration, 1)) * (geo.size.height - 70)
+                            let color = ColorTrapViewModel.palette[spawn.colorIndex % ColorTrapViewModel.palette.count]
+
+                            Circle()
+                                .fill(color)
+                                .overlay {
+                                    Circle().strokeBorder(.white.opacity(0.32), lineWidth: 1.2)
+                                }
+                                .frame(width: tileSize, height: tileSize)
+                                .position(x: xCenter, y: yOffset + 36)
+                        }
+                    }
+                }
+                .frame(height: 220)
+            }
+        }
+        .saturation(0)
     }
 
     private func multiResultsView(state: ColorTrapGameState) -> some View {

@@ -153,6 +153,9 @@ struct TapInOrderSessionView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
+                spectatorBoardPreview(state: state)
+                    .padding(.horizontal, 16)
+
                 if !state.playerResults.isEmpty {
                     SurfaceCard {
                         VStack(alignment: .leading, spacing: 10) {
@@ -182,6 +185,63 @@ struct TapInOrderSessionView: View {
             }
             .padding(.horizontal, 16)
         }
+    }
+
+    private func spectatorBoardPreview(state: TapInOrderGameState) -> some View {
+        let cols = state.gridSize
+        let spacing: CGFloat = 6
+        let columns = Array(repeating: GridItem(.flexible(), spacing: spacing), count: cols)
+
+        return SurfaceCard {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeaderView(title: "Spectator View", subtitle: "Same layout, shown in black and white until your turn.")
+                GeometryReader { geo in
+                    let available = geo.size.width - CGFloat(cols - 1) * spacing
+                    let tileSize = available / CGFloat(cols)
+                    LazyVGrid(columns: columns, spacing: spacing) {
+                        ForEach(0..<(cols * cols), id: \.self) { index in
+                            spectatorTile(index: index, state: state)
+                                .frame(height: tileSize)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(height: min(CGFloat(cols) * 64, 320))
+            }
+        }
+        .saturation(0)
+    }
+
+    private func spectatorTile(index: Int, state: TapInOrderGameState) -> some View {
+        let isSelected = state.selectedCells.contains(index)
+        let number = state.resolvedVariant == .numberMemory ? state.selectedCells.firstIndex(of: index).map { $0 + 1 } : nil
+        let baseColor: Color = isSelected ? .white.opacity(0.28) : .white.opacity(0.08)
+        let borderColor: Color = isSelected ? .white.opacity(0.38) : .white.opacity(0.14)
+        let cornerRadius: CGFloat = state.gridSize >= 6 ? 10 : 14
+
+        return RoundedRectangle(cornerRadius: cornerRadius)
+            .fill(
+                LinearGradient(
+                    colors: [baseColor, baseColor.opacity(0.45)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay {
+                if let number {
+                    Text("\(number)")
+                        .font(.system(size: state.gridSize >= 6 ? 18 : 24, weight: .heavy))
+                        .foregroundStyle(.white.opacity(0.86))
+                } else if isSelected {
+                    Circle()
+                        .fill(.white.opacity(0.28))
+                        .frame(width: 18, height: 18)
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .strokeBorder(borderColor, lineWidth: 1.5)
+            }
     }
 
     private func multiResultsView(state: TapInOrderGameState, players: [PlayerProfile]) -> some View {

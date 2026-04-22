@@ -16,6 +16,7 @@ final class CasualRoomViewModel {
     var wasKicked: Bool = false
     var roomClosed: Bool = false
     var hostLeft: Bool = false
+    var shouldAutoDismissLobby: Bool = false
     var waitingTooLong: Bool = false
     var isReconnecting: Bool = false
     var readyCheckActive: Bool = false
@@ -24,6 +25,7 @@ final class CasualRoomViewModel {
     var fakeAnswerSettings: FakeAnswerSettings = .default
     var teamState: TeamState = .default
     var playMode: GameMode = .multiDevice
+    var onSessionEnded: (() -> Void)?
 
     private let roomService: CasualRoomService
     var service: CasualRoomService { roomService }
@@ -103,6 +105,7 @@ final class CasualRoomViewModel {
                     GuestSessionStore.clear()
                     return
                 }
+                shouldAutoDismissLobby = false
                 room = rejoinedRoom
                 localPlayer = player
                 isConnected = true
@@ -126,6 +129,7 @@ final class CasualRoomViewModel {
     }
 
     private func createRoomInternal(gameType: GameType, name: String) {
+        shouldAutoDismissLobby = false
         isBusy = true
         errorMessage = nil
 
@@ -177,6 +181,7 @@ final class CasualRoomViewModel {
             return
         }
 
+        shouldAutoDismissLobby = false
         isBusy = true
         errorMessage = nil
 
@@ -485,6 +490,10 @@ final class CasualRoomViewModel {
         roomService.onPlayerKicked = { [weak self] playerID in
             guard let self else { return }
             if self.localPlayer?.id == playerID {
+                if self.gameStarted {
+                    self.shouldAutoDismissLobby = true
+                    self.onSessionEnded?()
+                }
                 self.wasKicked = true
                 self.disconnect()
             }
@@ -493,6 +502,10 @@ final class CasualRoomViewModel {
         roomService.onRoomClosed = { [weak self] in
             guard let self else { return }
             if !self.isHost {
+                if self.gameStarted {
+                    self.shouldAutoDismissLobby = true
+                    self.onSessionEnded?()
+                }
                 self.hostLeft = true
                 self.disconnect()
             }
@@ -549,6 +562,10 @@ final class CasualRoomViewModel {
             // Only an explicit room close (host pressed Leave) ends the session for guests.
             // A host going to background / losing network momentarily does NOT close the room.
             if status == .closed && !isHost {
+                if gameStarted {
+                    shouldAutoDismissLobby = true
+                    onSessionEnded?()
+                }
                 hostLeft = true
                 disconnect()
                 return
@@ -563,6 +580,10 @@ final class CasualRoomViewModel {
             // the host kicked us. Fires even if the broadcast was missed.
             if !isHost, let localID = localPlayer?.id,
                !players.contains(where: { $0.id == localID }) {
+                if gameStarted {
+                    shouldAutoDismissLobby = true
+                    onSessionEnded?()
+                }
                 wasKicked = true
                 disconnect()
                 return

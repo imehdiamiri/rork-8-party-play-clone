@@ -111,6 +111,9 @@ final class AppViewModel {
     private var isApplyingRemoteSessionState: Bool = false
     private weak var casualRoomService: CasualRoomService?
     private var casualSessionOriginPlayerID: UUID?
+    private var casualSessionRoomID: UUID?
+    private var casualSessionToken: String?
+    private var casualRoomCleanupHandler: (() -> Void)?
     private var timerTask: Task<Void, Never>?
     private var wasInBackground: Bool = false
     private var backgroundTimersPaused: Bool = false
@@ -629,19 +632,62 @@ final class AppViewModel {
 
     // MARK: - Casual Multiplayer
 
-    func startCasualMultiplayerSession(game: GameType, mode: GameMode, players: [PlayerProfile], roomCode: String, localPlayerID: UUID?) {
+    func startCasualMultiplayerSession(game: GameType, mode: GameMode, players: [PlayerProfile], roomCode: String, localPlayerID: UUID?, sessionID: UUID? = nil, syncToPeers: Bool = true) {
         sessionOverridePlayerID = localPlayerID
-        startSession(game: game, mode: mode, players: players, roomCode: roomCode)
+        startSession(game: game, mode: mode, players: players, roomCode: roomCode, sessionID: sessionID, syncToPeers: syncToPeers)
     }
 
-    func attachCasualRoomService(_ service: CasualRoomService, localPlayerID: UUID?) {
+    func attachCasualRoomService(_ service: CasualRoomService, localPlayerID: UUID?, roomID: UUID?, sessionToken: String?, cleanup: (() -> Void)? = nil) {
         casualRoomService = service
         casualSessionOriginPlayerID = localPlayerID
+        casualSessionRoomID = roomID
+        casualSessionToken = sessionToken
+        casualRoomCleanupHandler = cleanup
     }
 
     func detachCasualRoomService() {
         casualRoomService = nil
         casualSessionOriginPlayerID = nil
+        casualSessionRoomID = nil
+        casualSessionToken = nil
+        casualRoomCleanupHandler = nil
+    }
+
+    func rebroadcastCurrentCasualSessionState(attempts: Int = 4) {
+        guard attempts > 0,
+              let session = activeSession,
+              session.mode == .multiDevice || session.mode == .teamMode,
+              let service = casualRoomService else { return }
+
+        let state = makeSessionStateRecord(from: session)
+        let origin = casualSessionOriginPlayerID ?? sessionPlayerID ?? UUID()
+
+        Task {
+            for attempt in 0..<attempts {
+                let payload = CasualGameStatePayload(
+                    sessionId: session.id.uuidString,
+                    originPlayerId: origin.uuidString,
+                    state: state
+                )
+                await service.broadcastGameState(payload)
+                if attempt < attempts - 1 {
+                    try? await Task.sleep(for: .milliseconds(450))
+                }
+            }
+        }
+    }
+
+    func exitActiveSession() async {
+        if let service = casualRoomService,
+           let roomID = casualSessionRoomID,
+           let playerID = casualSessionOriginPlayerID,
+           let sessionToken = casualSessionToken,
+           activeSession?.mode != .singleDevice {
+            try? await service.leaveRoom(roomID: roomID, playerID: playerID, sessionToken: sessionToken)
+            casualRoomCleanupHandler?()
+        }
+
+        dismissSession()
     }
 
     func applyRemoteCasualGameState(_ payload: CasualGameStatePayload) {
@@ -741,6 +787,7 @@ final class AppViewModel {
         activeSession = nil
         activeSessionRecordID = nil
         sessionOverridePlayerID = nil
+        detachCasualRoomService()
         resilienceService.clearActiveSession()
     }
 
@@ -1496,9 +1543,9 @@ final class AppViewModel {
         )
     }
 
-    private func startSession(game: GameType, mode: GameMode, players: [PlayerProfile], roomCode: String?, roundCount: Int? = nil) {
+    private func startSession(game: GameType, mode: GameMode, players: [PlayerProfile], roomCode: String?, roundCount: Int? = nil, sessionID: UUID? = nil, syncToPeers: Bool = true) {
         let rounds = buildRounds(game: game, players: players, roundCount: roundCount)
-        let sessionID = UUID()
+        let sessionID = sessionID ?? UUID()
         let fakeAnswerState: FakeAnswerRoundState? = nil
         let passGuessState: PassGuessRoundState?
         if game.rawValue == GameType.passGuess.rawValue {
@@ -1577,14 +1624,14 @@ final class AppViewModel {
                 do {
                     let created = try await databaseService.createGameSession(sessionID: sessionID, roomID: currentRoom.id, game: game, mode: mode, userID: currentUserID, sessionState: sessionState)
                     self.activeSessionRecordID = created.id
-                    self.updateSession(session)
+                    self.updateSession(session, syncToPeers: syncToPeers)
                 } catch {
                     self.errorMessage = error.localizedDescription
                 }
             }
         } else {
             activeSessionRecordID = nil
-            updateSession(session)
+            updateSession(session, syncToPeers: syncToPeers)
         }
     }
 
@@ -1948,13 +1995,13 @@ final class AppViewModel {
         )
     }
 
-    private func updateSession(_ session: GameSession) {
+    private func updateSession(_ session: GameSession, syncToPeers: Bool = true) {
         activeSession = session
         guard !isApplyingRemoteSessionState else { return }
         guard session.mode == .multiDevice || session.mode == .teamMode else { return }
         let state = makeSessionStateRecord(from: session)
 
-        if let service = casualRoomService, session.roomCode != nil {
+        if syncToPeers, let service = casualRoomService, session.roomCode != nil {
             let origin = casualSessionOriginPlayerID ?? sessionPlayerID ?? UUID()
             let payload = CasualGameStatePayload(sessionId: session.id.uuidString, originPlayerId: origin.uuidString, state: state)
             Task { await service.broadcastGameState(payload) }

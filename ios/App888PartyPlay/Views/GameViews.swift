@@ -511,6 +511,13 @@ struct GameSessionView: View {
         appModel.activeSession?.id == sessionID ? appModel.activeSession : nil
     }
 
+    private func requestSessionExit() {
+        Task {
+            await appModel.exitActiveSession()
+            dismiss()
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -535,8 +542,7 @@ struct GameSessionView: View {
             }
             .confirmationDialog("Leave Game?", isPresented: $isShowingLeaveConfirmation, titleVisibility: .visible) {
                 Button("Leave Game", role: .destructive) {
-                    appModel.dismissSession()
-                    dismiss()
+                    requestSessionExit()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
@@ -550,58 +556,47 @@ struct GameSessionView: View {
     private func sessionContent(_ session: GameSession) -> some View {
         if session.game.rawValue == GameType.reverseSinging.rawValue {
             ReverseSingingSessionView(appModel: appModel, session: session) {
-                appModel.dismissSession()
-                dismiss()
+                requestSessionExit()
             }
         } else if session.game.rawValue == GameType.guessTheSeconds.rawValue {
             GuessTheSecondsSessionView(appModel: appModel, session: session) {
-                appModel.dismissSession()
-                dismiss()
+                requestSessionExit()
             }
         } else if session.game.rawValue == GameType.tenTangle.rawValue {
             TenTangleSessionView(appModel: appModel, session: session) {
-                appModel.dismissSession()
-                dismiss()
+                requestSessionExit()
             }
         } else if session.game.rawValue == GameType.imposter.rawValue {
             ImposterSessionView(appModel: appModel, session: session) {
-                appModel.dismissSession()
-                dismiss()
+                requestSessionExit()
             }
         } else if session.game.rawValue == GameType.memoryGrid.rawValue {
             MemoryGridSessionView(appModel: appModel, session: session) {
-                appModel.dismissSession()
-                dismiss()
+                requestSessionExit()
             }
         } else if session.game.rawValue == GameType.memoryPath.rawValue {
             MemoryPathSessionView(appModel: appModel, session: session) {
-                appModel.dismissSession()
-                dismiss()
+                requestSessionExit()
             }
         } else if session.game.rawValue == GameType.passGuess.rawValue {
             PassGuessSessionView(appModel: appModel, session: session) {
-                appModel.dismissSession()
-                dismiss()
+                requestSessionExit()
             }
         } else if session.game.rawValue == GameType.tapInOrder.rawValue {
             TapInOrderSessionView(appModel: appModel, session: session) {
-                appModel.dismissSession()
-                dismiss()
+                requestSessionExit()
             }
         } else if session.game.rawValue == GameType.colorTrap.rawValue {
             ColorTrapSessionView(appModel: appModel, session: session) {
-                appModel.dismissSession()
-                dismiss()
+                requestSessionExit()
             }
         } else if session.game.rawValue == GameType.drawRush.rawValue {
             DrawRushMultiDeviceSessionView(appModel: appModel, session: session) {
-                appModel.dismissSession()
-                dismiss()
+                requestSessionExit()
             }
         } else if session.game.rawValue == GameType.spinBottle.rawValue {
             SpinBottleSessionView(appModel: appModel, session: session) {
-                appModel.dismissSession()
-                dismiss()
+                requestSessionExit()
             }
         } else {
             ZStack {
