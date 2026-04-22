@@ -809,7 +809,7 @@ nonisolated struct FriendRequestRecord: Codable, Identifiable, Hashable, Sendabl
         case receiverID = "receiver_id"
         case status
         case createdAt = "created_at"
-        case senderProfile = "sender:profiles!friend_requests_sender_id_fkey"
+        case senderProfile = "sender"
     }
 }
 

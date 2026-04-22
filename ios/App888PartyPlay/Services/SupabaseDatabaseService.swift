@@ -388,13 +388,20 @@ nonisolated final class SupabaseDatabaseService: Sendable {
             .execute()
             .value) ?? []
 
-        return requests.map {
-            FriendRequest(
-                id: $0.id,
-                name: $0.senderProfile?.username ?? "Player",
+        return requests.map { record in
+            let profile = record.senderProfile
+            let displayName = profile?.displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let username = profile?.username.trimmingCharacters(in: .whitespacesAndNewlines)
+            let emailPrefix = profile?.email?.components(separatedBy: "@").first?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let resolved = [displayName, username, emailPrefix]
+                .compactMap { $0 }
+                .first(where: { !$0.isEmpty }) ?? "Player"
+            return FriendRequest(
+                id: record.id,
+                name: resolved,
                 mutualFriends: 0,
-                publicUserID: $0.senderProfile?.publicID,
-                avatarURL: $0.senderProfile?.avatarURL
+                publicUserID: profile?.publicID,
+                avatarURL: profile?.avatarURL
             )
         }
         .sorted { lhs, rhs in
