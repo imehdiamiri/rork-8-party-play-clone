@@ -68,7 +68,7 @@ struct MemoryGridSessionView: View {
 
     @ViewBuilder
     private var multiDeviceBody: some View {
-        if let mg = appModel.activeSession?.memoryGridState {
+        if let mg = appModel.activeSession?.memoryGridState ?? session.memoryGridState {
             let currentSession = appModel.activeSession ?? session
             let isMyTurn = appModel.isCurrentPlayerTurn(in: currentSession)
             let turnPlayerName = appModel.currentTurnPlayerName(in: currentSession)

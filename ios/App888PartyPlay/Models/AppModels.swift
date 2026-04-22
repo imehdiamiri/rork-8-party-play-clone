@@ -129,7 +129,7 @@ nonisolated struct GameType: RawRepresentable, Identifiable, Hashable, Sendable 
         isFreeForever: true,
         hasFreeTrial: false,
         symbolName: "stopwatch.fill",
-        supportedModes: [.singleDevice, .multiDevice, .teamMode],
+        supportedModes: [.singleDevice],
         roundDuration: 90,
         heroImageURL: "https://r2-pub.rork.com/generated-images/d8092484-fefa-4921-9732-636c97a59a09.png"
     )
