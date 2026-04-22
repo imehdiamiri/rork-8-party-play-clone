@@ -197,12 +197,12 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $showJoinSheet) {
             QuickJoinSheet(appModel: appModel, onGameStarted: { showJoinSheet = false })
         }
+        .onChange(of: appModel.requestCasualSheetDismiss) { _, shouldDismiss in
+            if shouldDismiss { showJoinSheet = false }
+        }
         .onChange(of: appModel.activeSession?.id) { _, newID in
             guard newID != nil else { return }
-            Task {
-                try? await Task.sleep(for: .milliseconds(650))
-                showJoinSheet = false
-            }
+            showJoinSheet = false
         }
     }
 
@@ -388,13 +388,16 @@ struct QuickJoinSheet: View {
                     }
                 }
         }
-        .onChange(of: appModel.activeSession?.id) { _, newID in
-            guard newID != nil else { return }
-            Task {
-                try? await Task.sleep(for: .milliseconds(650))
+        .onChange(of: appModel.requestCasualSheetDismiss) { _, shouldDismiss in
+            if shouldDismiss {
                 onGameStarted?()
                 dismiss()
             }
+        }
+        .onChange(of: appModel.activeSession?.id) { _, newID in
+            guard newID != nil else { return }
+            onGameStarted?()
+            dismiss()
         }
     }
 }
@@ -535,12 +538,12 @@ struct FriendsView: View {
                     }
             }
         }
+        .onChange(of: appModel.requestCasualSheetDismiss) { _, shouldDismiss in
+            if shouldDismiss { showJoinSheet = false }
+        }
         .onChange(of: appModel.activeSession?.id) { _, newID in
             guard newID != nil else { return }
-            Task {
-                try? await Task.sleep(for: .milliseconds(650))
-                showJoinSheet = false
-            }
+            showJoinSheet = false
         }
     }
 

@@ -564,38 +564,67 @@ fileprivate func startGameSession(appModel: AppViewModel, casualVM: CasualRoomVi
     guard let room = casualVM.room else { return }
     let players = casualVM.buildPlayersForSession()
     let localID = casualVM.localPlayer?.id
+    let isHost = casualVM.isHost
+    let roomID = room.id
+    let roomCode = room.code
+    let gameType = room.gameType
+    let playMode = room.playMode
+    let sessionToken = casualVM.localPlayer?.sessionToken
+    let service = casualVM.service
 
     casualVM.onSessionEnded = { [weak appModel] in
         appModel?.dismissSession()
     }
-    casualVM.service.onGameStateSync = { [weak appModel] payload in
+    service.onGameStateSync = { [weak appModel] payload in
         appModel?.applyRemoteCasualGameState(payload)
     }
     appModel.attachCasualRoomService(
-        casualVM.service,
+        service,
         localPlayerID: localID,
-        roomID: room.id,
-        sessionToken: casualVM.localPlayer?.sessionToken,
-        cleanup: {
-            casualVM.shouldAutoDismissLobby = true
-            casualVM.disconnect()
+        roomID: roomID,
+        sessionToken: sessionToken,
+        cleanup: { [weak casualVM] in
+            casualVM?.shouldAutoDismissLobby = true
+            casualVM?.disconnect()
         }
     )
 
-    guard appModel.activeSession?.roomCode != room.code else { return }
+    guard appModel.activeSession?.roomCode != roomCode else { return }
 
-    appModel.startCasualMultiplayerSession(
-        game: room.gameType,
-        mode: room.playMode,
-        players: players,
-        roomCode: room.code,
-        localPlayerID: localID,
-        sessionID: room.id,
-        syncToPeers: casualVM.isHost
-    )
-
-    if casualVM.isHost {
+    if isHost {
+        // Host isn't inside a fullScreenCover — safe to set activeSession immediately.
+        appModel.startCasualMultiplayerSession(
+            game: gameType,
+            mode: playMode,
+            players: players,
+            roomCode: roomCode,
+            localPlayerID: localID,
+            sessionID: roomID,
+            syncToPeers: true
+        )
         appModel.rebroadcastCurrentCasualSessionState()
+    } else {
+        // Guest is inside a QuickJoinSheet fullScreenCover. SwiftUI cannot layer
+        // MainTabView's .fullScreenCover(item: activeSession) over it, so we
+        // must dismiss the join sheet FIRST, then set activeSession.
+        appModel.requestCasualSheetDismiss = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(650))
+            guard appModel.activeSession?.roomCode != roomCode else {
+                appModel.requestCasualSheetDismiss = false
+                return
+            }
+            appModel.startCasualMultiplayerSession(
+                game: gameType,
+                mode: playMode,
+                players: players,
+                roomCode: roomCode,
+                localPlayerID: localID,
+                sessionID: roomID,
+                syncToPeers: false
+            )
+            appModel.requestCasualSheetDismiss = false
+        }
     }
 }
 

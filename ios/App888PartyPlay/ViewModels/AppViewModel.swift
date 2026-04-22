@@ -85,6 +85,7 @@ final class AppViewModel {
     var showRejoinPrompt: Bool = false
     var pendingRejoinSessionID: UUID?
     var syncErrorMessage: String?
+    var requestCasualSheetDismiss: Bool = false
 
     var sessionPlayerID: UUID? {
         if let sessionOverridePlayerID {
