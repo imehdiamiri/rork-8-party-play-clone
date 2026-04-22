@@ -269,15 +269,15 @@ struct CasualJoinRoomView: View {
                 focusedField = .name
             }
         }
-        .alert("Kicked", isPresented: $casualVM.wasKicked) {
+        .alert("Removed from Room", isPresented: $casualVM.wasKicked) {
             Button("OK") { dismiss() }
         } message: {
-            Text("You were removed from the room by the host.")
+            Text("The host removed you from this room. You can join another room any time.")
         }
         .alert("Room Closed", isPresented: $casualVM.roomClosed) {
             Button("OK") { dismiss() }
         } message: {
-            Text("The host closed this room.")
+            Text("The host closed this room. This code has expired.")
         }
     }
 }
@@ -328,20 +328,26 @@ struct CasualLobbyView: View {
         } message: {
             Text(casualVM.isHost ? "This will close the room for everyone." : "You will leave this room.")
         }
-        .alert("Kicked", isPresented: $casualVM.wasKicked) {
+        .alert("Removed from Room", isPresented: $casualVM.wasKicked) {
             Button("OK") { dismiss() }
         } message: {
-            Text("You were removed from the room by the host.")
+            Text("The host removed you from this room. You can rejoin any room with a valid code.")
         }
         .alert("Room Closed", isPresented: $casualVM.roomClosed) {
             Button("OK") { dismiss() }
         } message: {
-            Text("The host closed this room.")
+            Text("The host closed this room. This code has expired and can no longer be used.")
         }
         .alert("Host Left", isPresented: $casualVM.hostLeft) {
             Button("Return to Lobby") { dismiss() }
         } message: {
-            Text("The host left the game. You've been returned to the main lobby.")
+            Text("The host left the game. This room code has expired.")
+        }
+        .sheet(isPresented: $casualVM.readyCheckActive) {
+            ReadyCheckSheet(casualVM: casualVM)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.hidden)
+                .interactiveDismissDisabled(true)
         }
         .task(id: casualVM.gameStarted) {
             guard casualVM.gameStarted else { return }
@@ -561,5 +567,101 @@ struct CasualLobbyView: View {
             roomCode: room.code,
             localPlayerID: casualVM.localPlayer?.id
         )
+    }
+}
+
+struct ReadyCheckSheet: View {
+    @Bindable var casualVM: CasualRoomViewModel
+
+    private var connectedPlayers: [GuestPlayer] {
+        (casualVM.room?.players ?? []).filter { $0.isConnected }
+    }
+
+    private var readyCount: Int {
+        connectedPlayers.filter { casualVM.readyConfirmedPlayerIDs.contains($0.id) }.count
+    }
+
+    var body: some View {
+        VStack(spacing: 18) {
+            VStack(spacing: 10) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 44, weight: .semibold))
+                    .foregroundStyle(.green)
+                    .symbolEffect(.pulse, options: .repeating)
+                Text(casualVM.isHost ? "Waiting for players to ready up" : "Ready to start?")
+                    .font(.title3.weight(.bold))
+                    .multilineTextAlignment(.center)
+                Text(casualVM.isHost
+                     ? "Game begins once everyone confirms they’re ready."
+                     : "The host wants to start the match. Tap Ready to begin.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+            .padding(.top, 20)
+
+            HStack(spacing: 6) {
+                Image(systemName: "person.2.fill")
+                    .foregroundStyle(.secondary)
+                Text("\(readyCount)/\(connectedPlayers.count) ready")
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.white.opacity(0.06), in: .capsule)
+
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach(connectedPlayers) { player in
+                        let isReady = casualVM.readyConfirmedPlayerIDs.contains(player.id)
+                        HStack(spacing: 10) {
+                            Image(systemName: isReady ? "checkmark.circle.fill" : "hourglass")
+                                .foregroundStyle(isReady ? .green : .orange)
+                            Text(player.displayName)
+                                .font(.subheadline.weight(.semibold))
+                            if player.isHost {
+                                StatusPillView(title: "Host", systemImage: "crown.fill", tint: .blue)
+                            }
+                            Spacer()
+                            Text(isReady ? "Ready" : "Waiting…")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(isReady ? .green : .secondary)
+                        }
+                        .padding(10)
+                        .background(.white.opacity(0.04), in: .rect(cornerRadius: 12))
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+            .frame(maxHeight: 180)
+
+            VStack(spacing: 10) {
+                if !casualVM.isHost {
+                    Button {
+                        casualVM.confirmReady()
+                    } label: {
+                        Label(casualVM.readyCheckLocalConfirmed ? "Ready!" : "I’m Ready",
+                              systemImage: casualVM.readyCheckLocalConfirmed ? "checkmark.circle.fill" : "hand.thumbsup.fill")
+                    }
+                    .buttonStyle(PrimaryActionButtonStyle())
+                    .disabled(casualVM.readyCheckLocalConfirmed)
+                } else {
+                    Button(role: .destructive) {
+                        casualVM.cancelReadyCheck()
+                    } label: {
+                        Label("Cancel", systemImage: "xmark.circle.fill")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.red)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+        }
+        .presentationBackground(.thinMaterial)
     }
 }

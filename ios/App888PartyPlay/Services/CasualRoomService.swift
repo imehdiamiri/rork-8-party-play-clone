@@ -23,6 +23,9 @@ final class CasualRoomService {
     var onPlayerKicked: ((UUID) -> Void)?
     var onRoomClosed: (() -> Void)?
     var onHostChanged: ((UUID) -> Void)?
+    var onReadyCheckRequested: ((UUID) -> Void)?
+    var onReadyCheckConfirmed: ((UUID) -> Void)?
+    var onReadyCheckCancelled: (() -> Void)?
 
     init(supabase: SupabaseService = .shared) {
         self.supabase = supabase
@@ -387,6 +390,9 @@ final class CasualRoomService {
         onPlayerKicked = nil
         onRoomClosed = nil
         onHostChanged = nil
+        onReadyCheckRequested = nil
+        onReadyCheckConfirmed = nil
+        onReadyCheckCancelled = nil
     }
 
     private func joinChannel(code: String) async throws {
@@ -408,6 +414,9 @@ final class CasualRoomService {
         let closeStream = ch.broadcastStream(event: CasualBroadcastEvent.roomClosed.rawValue)
         let refreshStream = ch.broadcastStream(event: CasualBroadcastEvent.roomStateSync.rawValue)
         let hostStream = ch.broadcastStream(event: CasualBroadcastEvent.hostChanged.rawValue)
+        let readyReqStream = ch.broadcastStream(event: CasualBroadcastEvent.readyCheckRequested.rawValue)
+        let readyConfStream = ch.broadcastStream(event: CasualBroadcastEvent.readyCheckConfirmed.rawValue)
+        let readyCancelStream = ch.broadcastStream(event: CasualBroadcastEvent.readyCheckCancelled.rawValue)
 
         try await ch.subscribeWithError()
 
@@ -443,6 +452,51 @@ final class CasualRoomService {
                         await self?.handleHostChangedMessage(message)
                     }
                 }
+                group.addTask {
+                    for await message in readyReqStream {
+                        guard !Task.isCancelled else { return }
+                        await self?.handleReadyCheckMessage(message, kind: .request)
+                    }
+                }
+                group.addTask {
+                    for await message in readyConfStream {
+                        guard !Task.isCancelled else { return }
+                        await self?.handleReadyCheckMessage(message, kind: .confirm)
+                    }
+                }
+                group.addTask {
+                    for await _ in readyCancelStream {
+                        guard !Task.isCancelled else { return }
+                        await self?.onReadyCheckCancelled?()
+                    }
+                }
+            }
+        }
+    }
+
+    private enum ReadyKind { case request, confirm }
+
+    func broadcastReadyCheckRequested(hostID: UUID) async {
+        await broadcastEvent(.readyCheckRequested, payload: ["hostId": hostID.uuidString])
+    }
+
+    func broadcastReadyCheckConfirmed(playerID: UUID) async {
+        await broadcastEvent(.readyCheckConfirmed, payload: ["playerId": playerID.uuidString])
+    }
+
+    func broadcastReadyCheckCancelled() async {
+        await broadcastEvent(.readyCheckCancelled, payload: ["cancelled": "true"])
+    }
+
+    private func handleReadyCheckMessage(_ message: JSONObject, kind: ReadyKind) {
+        switch kind {
+        case .request:
+            if case .string(let idStr) = message["hostId"], let uuid = UUID(uuidString: idStr) {
+                onReadyCheckRequested?(uuid)
+            }
+        case .confirm:
+            if case .string(let idStr) = message["playerId"], let uuid = UUID(uuidString: idStr) {
+                onReadyCheckConfirmed?(uuid)
             }
         }
     }

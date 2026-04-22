@@ -18,6 +18,9 @@ final class CasualRoomViewModel {
     var hostLeft: Bool = false
     var waitingTooLong: Bool = false
     var isReconnecting: Bool = false
+    var readyCheckActive: Bool = false
+    var readyCheckLocalConfirmed: Bool = false
+    var readyConfirmedPlayerIDs: Set<UUID> = []
     var fakeAnswerSettings: FakeAnswerSettings = .default
     var teamState: TeamState = .default
     var playMode: GameMode = .multiDevice
@@ -224,7 +227,43 @@ final class CasualRoomViewModel {
     }
 
     func startGame() {
-        guard canStart, let room else { return }
+        guard canStart, let room, let localPlayer else { return }
+        readyCheckActive = true
+        readyCheckLocalConfirmed = true
+        readyConfirmedPlayerIDs = [localPlayer.id]
+        Task {
+            await roomService.broadcastReadyCheckRequested(hostID: localPlayer.id)
+            await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
+        }
+        _ = room
+    }
+
+    func confirmReady() {
+        guard readyCheckActive, let localPlayer else { return }
+        if !readyCheckLocalConfirmed {
+            readyCheckLocalConfirmed = true
+            readyConfirmedPlayerIDs.insert(localPlayer.id)
+            Task {
+                await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
+            }
+        }
+        checkAllReadyAndStart()
+    }
+
+    func cancelReadyCheck() {
+        guard isHost else { return }
+        readyCheckActive = false
+        readyCheckLocalConfirmed = false
+        readyConfirmedPlayerIDs.removeAll()
+        Task { await roomService.broadcastReadyCheckCancelled() }
+    }
+
+    private func checkAllReadyAndStart() {
+        guard isHost, let room else { return }
+        let connectedIDs = Set(room.players.filter { $0.isConnected }.map { $0.id })
+        guard !connectedIDs.isEmpty else { return }
+        guard connectedIDs.isSubset(of: readyConfirmedPlayerIDs) else { return }
+
         let startingRoom = CasualRoom(
             id: room.id,
             code: room.code,
@@ -239,6 +278,7 @@ final class CasualRoomViewModel {
             teamState: playMode == .teamMode ? teamState : nil
         )
         self.room = startingRoom
+        readyCheckActive = false
         gameStarted = true
         Task {
             try? await roomService.startGame(room: startingRoom, hostSessionToken: sessionToken)
@@ -431,6 +471,29 @@ final class CasualRoomViewModel {
             Task { @MainActor in
                 await self.refreshRoomFromDB()
             }
+        }
+
+        roomService.onReadyCheckRequested = { [weak self] _ in
+            guard let self else { return }
+            if !self.isHost {
+                self.readyCheckActive = true
+                self.readyCheckLocalConfirmed = false
+            }
+        }
+
+        roomService.onReadyCheckConfirmed = { [weak self] playerID in
+            guard let self else { return }
+            self.readyConfirmedPlayerIDs.insert(playerID)
+            if self.isHost {
+                self.checkAllReadyAndStart()
+            }
+        }
+
+        roomService.onReadyCheckCancelled = { [weak self] in
+            guard let self else { return }
+            self.readyCheckActive = false
+            self.readyCheckLocalConfirmed = false
+            self.readyConfirmedPlayerIDs.removeAll()
         }
     }
 
