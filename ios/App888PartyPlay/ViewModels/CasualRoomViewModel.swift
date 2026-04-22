@@ -26,10 +26,16 @@ final class CasualRoomViewModel {
     var playMode: GameMode = .multiDevice
 
     private let roomService: CasualRoomService
+    let engine: MultiplayerRoomEngine
     private var refreshTask: Task<Void, Never>?
     private var watchdogTask: Task<Void, Never>?
     private var waitingTimerTask: Task<Void, Never>?
     private var lobbyStartTime: Date?
+
+    var connectionState: MultiplayerConnectionState { engine.connectionState }
+    var sessionSnapshot: MultiplayerSessionSnapshot? { engine.snapshot }
+    var readyCount: Int { engine.readyCheck.readyCount }
+    var readyTotal: Int { engine.readyCheck.totalCount }
 
 
     var isHost: Bool {
@@ -60,7 +66,9 @@ final class CasualRoomViewModel {
     }
 
     init() {
-        self.roomService = CasualRoomService()
+        let service = CasualRoomService()
+        self.roomService = service
+        self.engine = MultiplayerRoomEngine(roomService: service)
         if let savedName = GuestSessionStore.loadDisplayName(), !savedName.isEmpty {
             self.displayName = savedName
         }
@@ -149,6 +157,8 @@ final class CasualRoomViewModel {
                 )
                 room = created
                 isConnected = true
+                engine.bootstrap(from: created, localPlayerID: playerID)
+                engine.hostAuthority.setHost(playerID)
                 GuestSessionStore.save(playerID: playerID, sessionToken: token, displayName: name, roomID: created.id)
                 setupCallbacks()
                 roomService.startHeartbeat(roomID: created.id, sessionToken: token)
@@ -198,6 +208,8 @@ final class CasualRoomViewModel {
                 teamState = joined.teamState ?? .default
                 gameStarted = joined.status == .starting || joined.status == .inProgress
                 isConnected = true
+                engine.bootstrap(from: joined, localPlayerID: playerID)
+                if let hostID = joined.host?.id { engine.hostAuthority.setHost(hostID) }
                 GuestSessionStore.save(playerID: playerID, sessionToken: token, displayName: trimmedName, roomID: joined.id)
                 setupCallbacks()
                 roomService.startHeartbeat(roomID: joined.id, sessionToken: token)
@@ -231,11 +243,10 @@ final class CasualRoomViewModel {
         readyCheckActive = true
         readyCheckLocalConfirmed = true
         readyConfirmedPlayerIDs = [localPlayer.id]
+        let connectedIDs = room.players.filter(\.isConnected).map(\.id)
         Task {
-            await roomService.broadcastReadyCheckRequested(hostID: localPlayer.id)
-            await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
+            await engine.readyCheck.hostStart(localID: localPlayer.id, connected: connectedIDs)
         }
-        _ = room
     }
 
     func confirmReady() {
@@ -244,7 +255,7 @@ final class CasualRoomViewModel {
             readyCheckLocalConfirmed = true
             readyConfirmedPlayerIDs.insert(localPlayer.id)
             Task {
-                await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
+                await engine.readyCheck.confirmLocal(localID: localPlayer.id)
             }
         }
         checkAllReadyAndStart()
@@ -255,7 +266,7 @@ final class CasualRoomViewModel {
         readyCheckActive = false
         readyCheckLocalConfirmed = false
         readyConfirmedPlayerIDs.removeAll()
-        Task { await roomService.broadcastReadyCheckCancelled() }
+        Task { await engine.readyCheck.cancel() }
     }
 
     private func checkAllReadyAndStart() {
@@ -371,6 +382,7 @@ final class CasualRoomViewModel {
         lobbyStartTime = nil
         waitingTooLong = false
         roomService.stopHeartbeat()
+        engine.tearDown()
         Task {
             if let room, let localPlayer {
                 await roomService.markPlayerDisconnected(
@@ -468,6 +480,7 @@ final class CasualRoomViewModel {
 
         roomService.onHostChanged = { [weak self] newHostID in
             guard let self else { return }
+            self.engine.hostAuthority.setHost(newHostID)
             Task { @MainActor in
                 await self.refreshRoomFromDB()
             }
@@ -478,12 +491,14 @@ final class CasualRoomViewModel {
             if !self.isHost {
                 self.readyCheckActive = true
                 self.readyCheckLocalConfirmed = false
+                self.engine.readyCheck.remoteRequested()
             }
         }
 
         roomService.onReadyCheckConfirmed = { [weak self] playerID in
             guard let self else { return }
             self.readyConfirmedPlayerIDs.insert(playerID)
+            self.engine.readyCheck.remoteConfirmed(playerID)
             if self.isHost {
                 self.checkAllReadyAndStart()
             }
@@ -494,6 +509,7 @@ final class CasualRoomViewModel {
             self.readyCheckActive = false
             self.readyCheckLocalConfirmed = false
             self.readyConfirmedPlayerIDs.removeAll()
+            self.engine.readyCheck.reset()
         }
     }
 
@@ -536,6 +552,13 @@ final class CasualRoomViewModel {
             playMode = resolvedPlayMode
             teamState = resolvedTeamState ?? .default
             gameStarted = status == .starting || status == .inProgress
+            engine.updatePlayers(players)
+            if let snap = engine.snapshot {
+                engine.readyCheck.rehydrate(from: snap)
+            }
+            if let hostID = players.first(where: \.isHost)?.id {
+                engine.hostAuthority.setHost(hostID)
+            }
         } catch {
             errorMessage = "Connection lost. Reconnecting…"
         }
