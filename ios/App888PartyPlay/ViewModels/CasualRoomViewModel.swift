@@ -27,7 +27,7 @@ final class CasualRoomViewModel {
     private var watchdogTask: Task<Void, Never>?
     private var waitingTimerTask: Task<Void, Never>?
     private var lobbyStartTime: Date?
-    private let hostTimeoutSeconds: TimeInterval = 15
+
 
     var isHost: Bool {
         guard let localPlayer, let room else { return false }
@@ -66,13 +66,11 @@ final class CasualRoomViewModel {
     func handleScenePhaseChange(to phase: ScenePhase) {
         switch phase {
         case .background:
-            refreshTask?.cancel()
-            refreshTask = nil
-            watchdogTask?.cancel()
-            watchdogTask = nil
-            waitingTimerTask?.cancel()
-            waitingTimerTask = nil
-            roomService.stopHeartbeat()
+            // Keep room alive in background. The OS may suspend us, but we do NOT
+            // tear down the heartbeat, watchdog, or room state. When the user comes
+            // back, the same room/game screen is still active. Only explicit
+            // leaveRoom() or host closing the room ends the session.
+            break
         case .active:
             guard isConnected, let room, let token = localPlayer?.sessionToken, !token.isEmpty else { return }
             isReconnecting = true
@@ -423,7 +421,7 @@ final class CasualRoomViewModel {
         roomService.onRoomClosed = { [weak self] in
             guard let self else { return }
             if !self.isHost {
-                self.roomClosed = true
+                self.hostLeft = true
                 self.disconnect()
             }
         }
@@ -442,20 +440,12 @@ final class CasualRoomViewModel {
             let (roomRecord, playerRecords) = try await roomService.fetchRoomFromDB(roomID: currentRoom.id)
             let status = CasualRoomStatus(rawValue: roomRecord.status) ?? .waiting
 
+            // Only an explicit room close (host pressed Leave) ends the session for guests.
+            // A host going to background / losing network momentarily does NOT close the room.
             if status == .closed && !isHost {
-                roomClosed = true
+                hostLeft = true
                 disconnect()
                 return
-            }
-
-            if !isHost, let hostRecord = playerRecords.first(where: { $0.isHost }) {
-                let hostLastSeen = hostRecord.lastSeenAt ?? hostRecord.joinedAt ?? Date()
-                let staleFor = Date().timeIntervalSince(hostLastSeen)
-                if !hostRecord.isConnected || staleFor > hostTimeoutSeconds {
-                    hostLeft = true
-                    disconnect()
-                    return
-                }
             }
 
             let players = playerRecords.map { $0.toGuestPlayer() }

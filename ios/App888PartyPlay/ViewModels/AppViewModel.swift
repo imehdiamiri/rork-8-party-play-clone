@@ -193,7 +193,11 @@ final class AppViewModel {
 
     private func handleEnterBackground() {
         wasInBackground = true
-        if activeSession != nil, activeSession?.mode != .singleDevice {
+        // Keep the active session alive. We only pause the host's round timer —
+        // the room stays open, players stay connected, and the game screen is
+        // still presented when the user re-opens the app. Only explicit Leave
+        // from the host tears down the session.
+        if activeSession != nil, activeSession?.mode != .singleDevice, isCurrentUserHost {
             backgroundTimersPaused = true
             timerTask?.cancel()
             timerTask = nil
@@ -322,20 +326,12 @@ final class AppViewModel {
     // MARK: - Host Disconnect
 
     private func handleRemoteSessionWithHostCheck(_ record: GameSessionRecord) {
-        guard let state = record.sessionState else { return }
+        // Only an explicit cancellation by the host ends the session for guests.
+        // A host briefly going to background or losing network does NOT end the room —
+        // the game screen stays active and resumes when the host comes back.
         if record.status == "cancelled" {
             showHostLeftAlert = true
             return
-        }
-        if let currentPlayerID {
-            let hostPlayer = state.players.first(where: { $0.isHost })
-            let isCurrentUserTheHost = hostPlayer?.id == currentPlayerID
-            if !isCurrentUserTheHost && record.status == "active" {
-                if hostPlayer == nil || hostPlayer?.isOnline == false {
-                    showHostLeftAlert = true
-                    return
-                }
-            }
         }
         applyRemoteSessionRecord(record)
     }
