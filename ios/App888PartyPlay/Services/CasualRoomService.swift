@@ -186,8 +186,15 @@ final class CasualRoomService {
             throw CasualRoomError.databaseError(error)
         }
 
-        await broadcastEvent(.playerKicked, payload: ["playerId": guestPlayerID.uuidString])
-        await notifyRoomUpdate()
+        // Broadcast kick multiple times so the target client definitely sees it
+        // even if the realtime channel was briefly unhealthy.
+        for attempt in 0..<3 {
+            await broadcastEvent(.playerKicked, payload: ["playerId": guestPlayerID.uuidString])
+            await notifyRoomUpdate()
+            if attempt < 2 {
+                try? await Task.sleep(for: .milliseconds(400))
+            }
+        }
     }
 
     func updateRoomStatus(roomID: UUID, status: CasualRoomStatus, hostSessionToken: String) async throws {
@@ -242,7 +249,15 @@ final class CasualRoomService {
             .value
 
         if response.room_closed == true {
-            await broadcastEvent(.roomClosed, payload: ["closed": "true"])
+            // Fire roomClosed broadcast several times so every guest on the
+            // channel sees it even through transient network blips.
+            for attempt in 0..<3 {
+                await broadcastEvent(.roomClosed, payload: ["closed": "true"])
+                await notifyRoomUpdate()
+                if attempt < 2 {
+                    try? await Task.sleep(for: .milliseconds(400))
+                }
+            }
         } else if let newHostStr = response.new_host_id {
             await broadcastEvent(.hostChanged, payload: ["newHostId": newHostStr])
             await notifyRoomUpdate()

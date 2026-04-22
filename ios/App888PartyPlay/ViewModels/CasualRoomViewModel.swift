@@ -233,10 +233,18 @@ final class CasualRoomViewModel {
         readyCheckLocalConfirmed = true
         readyConfirmedPlayerIDs = [localPlayer.id]
         Task {
-            await roomService.broadcastReadyCheckRequested(hostID: localPlayer.id)
-            await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
+            // Fire the ready-check request up to 3 times with a small delay so
+            // guests that briefly had channel hiccups still receive it.
+            for attempt in 0..<3 {
+                await roomService.broadcastReadyCheckRequested(hostID: localPlayer.id)
+                await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
+                // Also push a roomStateSync so guests re-fetch and stay in sync.
+                await roomService.broadcastRoomState(room)
+                if attempt < 2 {
+                    try? await Task.sleep(for: .milliseconds(600))
+                }
+            }
         }
-        _ = room
         checkAllReadyAndStart()
     }
 
@@ -388,9 +396,13 @@ final class CasualRoomViewModel {
         localPlayer = nil
         isConnected = false
         gameStarted = false
-        wasKicked = false
-        roomClosed = false
+        readyCheckActive = false
+        readyCheckLocalConfirmed = false
+        readyConfirmedPlayerIDs.removeAll()
         errorMessage = nil
+        // NOTE: wasKicked / roomClosed / hostLeft are one-shot alert flags.
+        // They MUST stay true until the alert is dismissed (binding resets them).
+        // Don't reset them here or the notification alerts never appear.
     }
 
     func updateSettings(_ settings: FakeAnswerSettings) {
@@ -536,6 +548,15 @@ final class CasualRoomViewModel {
             }
 
             let players = playerRecords.map { $0.toGuestPlayer() }
+
+            // DB-fallback kick detection: if we (non-host) are no longer in the player list,
+            // the host kicked us. Fires even if the broadcast was missed.
+            if !isHost, let localID = localPlayer?.id,
+               !players.contains(where: { $0.id == localID }) {
+                wasKicked = true
+                disconnect()
+                return
+            }
             let settings = FakeAnswerSettings(
                 rounds: roomRecord.settingsRounds,
                 answerTime: roomRecord.settingsAnswerTime,
