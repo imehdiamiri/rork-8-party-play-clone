@@ -88,10 +88,34 @@ struct MemoryPathSessionView: View {
                     multiTurnCompleteView(mp: mp)
                 }
             } else if isMyTurn {
-                multiReadyView(mp: mp, players: currentSession.players)
+                multiAutoStartView(mp: mp)
             } else {
                 multiWaitingView(mp: mp, turnPlayerName: turnPlayerName, players: currentSession.players)
             }
+        }
+    }
+
+    private func multiAutoStartView(mp: MemoryPathGameState) -> some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "map.fill")
+                .font(.system(size: 64, weight: .bold))
+                .foregroundStyle(.teal)
+                .symbolEffect(.pulse, options: .repeating)
+            Text("Your Turn!")
+                .font(.title.weight(.bold))
+                .foregroundStyle(.green)
+            Text("Get ready...")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task(id: mp.currentPlayerIndex) {
+            try? await Task.sleep(for: .milliseconds(900))
+            guard !Task.isCancelled else { return }
+            FeedbackService.shared.playRoundStart()
+            startMultiTurn(mp: mp)
         }
     }
 

@@ -82,10 +82,35 @@ struct ColorTrapSessionView: View {
                         if done { handleMultiComplete() }
                     }
             } else if isMyTurn {
-                multiReadyView(state: state)
+                multiAutoStartView(state: state)
             } else {
                 multiWaitingView(state: state, turnName: turnName)
             }
+        }
+    }
+
+    private func multiAutoStartView(state: ColorTrapGameState) -> some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "paintpalette.fill")
+                .font(.system(size: 64, weight: .bold))
+                .foregroundStyle(.pink)
+                .symbolEffect(.pulse, options: .repeating)
+            Text("Your Turn!")
+                .font(.title.weight(.bold))
+                .foregroundStyle(.green)
+            Text("Get ready...")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task(id: state.currentPlayerIndex) {
+            try? await Task.sleep(for: .milliseconds(900))
+            guard !Task.isCancelled else { return }
+            FeedbackService.shared.playRoundStart()
+            viewModel.start(difficulty: state.resolvedDifficulty, seed: state.seed, forbiddenColorIndex: state.forbiddenColorIndex)
+            withAnimation(.spring(duration: 0.4)) { gamePhase = .playing }
         }
     }
 
