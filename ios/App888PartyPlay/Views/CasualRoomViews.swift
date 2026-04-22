@@ -285,6 +285,21 @@ struct CasualJoinRoomView: View {
 struct CasualLobbyView: View {
     let appModel: AppViewModel
     @Bindable var casualVM: CasualRoomViewModel
+
+    var body: some View {
+        Group {
+            if casualVM.isHost {
+                HostLobbyView(appModel: appModel, casualVM: casualVM)
+            } else {
+                GuestLobbyView(appModel: appModel, casualVM: casualVM)
+            }
+        }
+    }
+}
+
+struct HostLobbyView: View {
+    let appModel: AppViewModel
+    @Bindable var casualVM: CasualRoomViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @State private var showLeaveConfirm: Bool = false
@@ -297,9 +312,7 @@ struct CasualLobbyView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     roomHeaderCard
-                    if casualVM.isHost {
-                        hostActionsSection
-                    }
+                    hostActionsSection
                     playersSection
                 }
                 .padding(.horizontal, 16)
@@ -307,41 +320,24 @@ struct CasualLobbyView: View {
                 .padding(.bottom, 28)
             }
         }
-        .navigationTitle("Party Lobby")
+        .navigationTitle("Host Lobby")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Leave") {
-                    showLeaveConfirm = true
-                }
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.red)
+                Button("Close Room") { showLeaveConfirm = true }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.red)
             }
         }
-        .confirmationDialog("Leave Room?", isPresented: $showLeaveConfirm, titleVisibility: .visible) {
-            Button("Leave", role: .destructive) {
+        .confirmationDialog("Close Room?", isPresented: $showLeaveConfirm, titleVisibility: .visible) {
+            Button("Close Room", role: .destructive) {
                 casualVM.leaveRoom()
                 dismiss()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text(casualVM.isHost ? "This will close the room for everyone." : "You will leave this room.")
-        }
-        .alert("Removed from Room", isPresented: $casualVM.wasKicked) {
-            Button("OK") { dismiss() }
-        } message: {
-            Text("The host removed you from this room. You can rejoin any room with a valid code.")
-        }
-        .alert("Room Closed", isPresented: $casualVM.roomClosed) {
-            Button("OK") { dismiss() }
-        } message: {
-            Text("The host closed this room. This code has expired and can no longer be used.")
-        }
-        .alert("Host Left", isPresented: $casualVM.hostLeft) {
-            Button("Return to Lobby") { dismiss() }
-        } message: {
-            Text("The host left the game. This room code has expired.")
+            Text("This will close the room for everyone and expire the code.")
         }
         .sheet(isPresented: $casualVM.readyCheckActive) {
             ReadyCheckSheet(casualVM: casualVM)
@@ -351,7 +347,7 @@ struct CasualLobbyView: View {
         }
         .task(id: casualVM.gameStarted) {
             guard casualVM.gameStarted else { return }
-            startGameSession()
+            startGameSession(appModel: appModel, casualVM: casualVM)
         }
         .onChange(of: scenePhase) { _, newPhase in
             casualVM.handleScenePhaseChange(to: newPhase)
@@ -556,26 +552,194 @@ struct CasualLobbyView: View {
         }
     }
 
-    private func startGameSession() {
-        guard let room = casualVM.room else { return }
-        let players = casualVM.buildPlayersForSession()
-        let localID = casualVM.localPlayer?.id
-        casualVM.service.onGameStateSync = { [weak appModel] payload in
-            appModel?.applyRemoteCasualGameState(payload)
+}
+
+@MainActor
+fileprivate func startGameSession(appModel: AppViewModel, casualVM: CasualRoomViewModel) {
+    guard let room = casualVM.room else { return }
+    let players = casualVM.buildPlayersForSession()
+    let localID = casualVM.localPlayer?.id
+    casualVM.service.onGameStateSync = { [weak appModel] payload in
+        appModel?.applyRemoteCasualGameState(payload)
+    }
+    appModel.attachCasualRoomService(casualVM.service, localPlayerID: localID)
+    guard appModel.activeSession?.roomCode != room.code else { return }
+    let isHost = casualVM.isHost
+    if isHost {
+        appModel.startCasualMultiplayerSession(
+            game: room.gameType,
+            mode: room.playMode,
+            players: players,
+            roomCode: room.code,
+            localPlayerID: localID
+        )
+    } else {
+        appModel.sessionOverridePlayerID = localID
+    }
+}
+
+struct GuestLobbyView: View {
+    let appModel: AppViewModel
+    @Bindable var casualVM: CasualRoomViewModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var showLeaveConfirm: Bool = false
+
+    private var room: CasualRoom? { casualVM.room }
+
+    var body: some View {
+        ZStack {
+            AppBackgroundView()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    guestHeroCard
+                    guestStatusCard
+                    guestPlayersCard
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 28)
+            }
         }
-        appModel.attachCasualRoomService(casualVM.service, localPlayerID: localID)
-        guard appModel.activeSession?.roomCode != room.code else { return }
-        let isHost = casualVM.isHost
-        if isHost {
-            appModel.startCasualMultiplayerSession(
-                game: room.gameType,
-                mode: room.playMode,
-                players: players,
-                roomCode: room.code,
-                localPlayerID: localID
+        .navigationTitle("Waiting Room")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Leave") { showLeaveConfirm = true }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.red)
+            }
+        }
+        .confirmationDialog("Leave Room?", isPresented: $showLeaveConfirm, titleVisibility: .visible) {
+            Button("Leave", role: .destructive) {
+                casualVM.leaveRoom()
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You will leave this room. The host will be notified.")
+        }
+        .alert("Removed from Room", isPresented: $casualVM.wasKicked) {
+            Button("OK") { dismiss() }
+        } message: {
+            Text("The host removed you from this room. You can rejoin any room with a valid code.")
+        }
+        .alert("Room Closed", isPresented: $casualVM.roomClosed) {
+            Button("OK") { dismiss() }
+        } message: {
+            Text("The host closed this room. This code has expired and can no longer be used.")
+        }
+        .alert("Host Left", isPresented: $casualVM.hostLeft) {
+            Button("Back") { dismiss() }
+        } message: {
+            Text("The host left the game. This room code has expired and cannot be used again.")
+        }
+        .sheet(isPresented: $casualVM.readyCheckActive) {
+            ReadyCheckSheet(casualVM: casualVM)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.hidden)
+                .interactiveDismissDisabled(true)
+        }
+        .task(id: casualVM.gameStarted) {
+            guard casualVM.gameStarted else { return }
+            startGameSession(appModel: appModel, casualVM: casualVM)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            casualVM.handleScenePhaseChange(to: newPhase)
+        }
+    }
+
+    private var guestHeroCard: some View {
+        SurfaceCard {
+            VStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(colors: [.blue.opacity(0.7), .purple.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 78, height: 78)
+                    Image(systemName: "hourglass")
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .symbolEffect(.pulse, options: .repeating)
+                }
+                Text("Waiting for the host")
+                    .font(.title3.weight(.bold))
+                Text("You joined **\(room?.host?.displayName ?? "the host")**’s room.\nThe game will start automatically when the host is ready.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+        }
+    }
+
+    private var guestStatusCard: some View {
+        SurfaceCard {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeaderView(title: "Room Info", subtitle: "You’re connected as a guest.")
+                HStack(spacing: 10) {
+                    Image(systemName: "gamecontroller.fill")
+                        .foregroundStyle(.blue)
+                    Text(room?.gameType.name ?? "Party Game")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    StatusPillView(title: "Connected", systemImage: "dot.radiowaves.up.forward", tint: .green)
+                }
+                .padding(10)
+                .background(.white.opacity(0.04), in: .rect(cornerRadius: 12))
+
+                HStack(spacing: 10) {
+                    Image(systemName: "person.fill")
+                        .foregroundStyle(.secondary)
+                    Text("Your name")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(casualVM.localPlayer?.displayName ?? "—")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .padding(10)
+                .background(.white.opacity(0.04), in: .rect(cornerRadius: 12))
+            }
+        }
+    }
+
+    private var guestPlayersCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeaderView(
+                title: "Players · \(room?.connectedCount ?? 0) in room",
+                subtitle: "Wait for the host to start the match."
             )
-        } else {
-            appModel.sessionOverridePlayerID = localID
+            ForEach(casualVM.players) { player in
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle().fill(.white.opacity(0.08)).frame(width: 34, height: 34)
+                        Text(String(player.displayName.prefix(1)).uppercased())
+                            .font(.caption.weight(.bold))
+                    }
+                    .overlay(alignment: .bottomTrailing) {
+                        Circle().fill(player.isConnected ? .green : .gray)
+                            .frame(width: 9, height: 9)
+                            .overlay { Circle().stroke(.black.opacity(0.6), lineWidth: 2) }
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 6) {
+                            Text(player.displayName)
+                                .font(.subheadline.weight(.semibold))
+                            if player.isHost {
+                                StatusPillView(title: "Host", systemImage: "crown.fill", tint: .blue)
+                            }
+                            if player.id == casualVM.localPlayer?.id {
+                                StatusPillView(title: "You", systemImage: "person.fill", tint: .green)
+                            }
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(10)
+                .background(.white.opacity(0.035), in: .rect(cornerRadius: 14))
+            }
         }
     }
 }
