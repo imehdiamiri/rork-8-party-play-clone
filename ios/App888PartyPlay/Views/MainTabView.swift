@@ -194,11 +194,8 @@ struct HomeView: View {
         .onChange(of: libraryResetID) { _, _ in
             selectedLibraryTab = .playable
         }
-        .sheet(isPresented: $showJoinSheet) {
+        .fullScreenCover(isPresented: $showJoinSheet) {
             QuickJoinSheet(appModel: appModel, onGameStarted: { showJoinSheet = false })
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-                .presentationContentInteraction(.scrolls)
         }
         .onChange(of: appModel.activeSession?.id) { _, newID in
             if newID != nil {
@@ -522,7 +519,7 @@ struct FriendsView: View {
         .sheet(isPresented: $showAuthSheet) {
             AuthView(appModel: appModel)
         }
-        .sheet(isPresented: $showJoinSheet) {
+        .fullScreenCover(isPresented: $showJoinSheet) {
             NavigationStack {
                 CasualJoinRoomView(appModel: appModel)
                     .navigationTitle("Join Room")
@@ -533,9 +530,6 @@ struct FriendsView: View {
                         }
                     }
             }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationContentInteraction(.scrolls)
         }
         .onChange(of: appModel.activeSession?.id) { _, newID in
             if newID != nil {
