@@ -559,14 +559,24 @@ struct CasualLobbyView: View {
     private func startGameSession() {
         guard let room = casualVM.room else { return }
         let players = casualVM.buildPlayersForSession()
+        let localID = casualVM.localPlayer?.id
+        casualVM.service.onGameStateSync = { [weak appModel] payload in
+            appModel?.applyRemoteCasualGameState(payload)
+        }
+        appModel.attachCasualRoomService(casualVM.service, localPlayerID: localID)
         guard appModel.activeSession?.roomCode != room.code else { return }
-        appModel.startCasualMultiplayerSession(
-            game: room.gameType,
-            mode: room.playMode,
-            players: players,
-            roomCode: room.code,
-            localPlayerID: casualVM.localPlayer?.id
-        )
+        let isHost = casualVM.isHost
+        if isHost {
+            appModel.startCasualMultiplayerSession(
+                game: room.gameType,
+                mode: room.playMode,
+                players: players,
+                roomCode: room.code,
+                localPlayerID: localID
+            )
+        } else {
+            appModel.sessionOverridePlayerID = localID
+        }
     }
 }
 

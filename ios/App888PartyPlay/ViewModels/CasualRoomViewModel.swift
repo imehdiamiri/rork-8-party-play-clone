@@ -26,6 +26,7 @@ final class CasualRoomViewModel {
     var playMode: GameMode = .multiDevice
 
     private let roomService: CasualRoomService
+    var service: CasualRoomService { roomService }
     private var refreshTask: Task<Void, Never>?
     private var watchdogTask: Task<Void, Never>?
     private var waitingTimerTask: Task<Void, Never>?

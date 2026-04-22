@@ -109,6 +109,8 @@ final class AppViewModel {
     }
 
     private var isApplyingRemoteSessionState: Bool = false
+    private weak var casualRoomService: CasualRoomService?
+    private var casualSessionOriginPlayerID: UUID?
     private var timerTask: Task<Void, Never>?
     private var wasInBackground: Bool = false
     private var backgroundTimersPaused: Bool = false
@@ -630,6 +632,28 @@ final class AppViewModel {
     func startCasualMultiplayerSession(game: GameType, mode: GameMode, players: [PlayerProfile], roomCode: String, localPlayerID: UUID?) {
         sessionOverridePlayerID = localPlayerID
         startSession(game: game, mode: mode, players: players, roomCode: roomCode)
+    }
+
+    func attachCasualRoomService(_ service: CasualRoomService, localPlayerID: UUID?) {
+        casualRoomService = service
+        casualSessionOriginPlayerID = localPlayerID
+    }
+
+    func detachCasualRoomService() {
+        casualRoomService = nil
+        casualSessionOriginPlayerID = nil
+    }
+
+    func applyRemoteCasualGameState(_ payload: CasualGameStatePayload) {
+        if let origin = UUID(uuidString: payload.originPlayerId),
+           let local = casualSessionOriginPlayerID,
+           origin == local { return }
+        let state = payload.state
+        let sessionID = UUID(uuidString: payload.sessionId) ?? activeSession?.id ?? UUID()
+        isApplyingRemoteSessionState = true
+        defer { isApplyingRemoteSessionState = false }
+        let session = buildSession(fromState: state, sessionID: sessionID)
+        activeSession = session
     }
 
     // MARK: - Multiplayer Start
@@ -1927,13 +1951,21 @@ final class AppViewModel {
     private func updateSession(_ session: GameSession) {
         activeSession = session
         guard !isApplyingRemoteSessionState else { return }
-        guard (session.mode == .multiDevice || session.mode == .teamMode), let activeSessionRecordID else { return }
+        guard session.mode == .multiDevice || session.mode == .teamMode else { return }
+        let state = makeSessionStateRecord(from: session)
+
+        if let service = casualRoomService, session.roomCode != nil {
+            let origin = casualSessionOriginPlayerID ?? sessionPlayerID ?? UUID()
+            let payload = CasualGameStatePayload(sessionId: session.id.uuidString, originPlayerId: origin.uuidString, state: state)
+            Task { await service.broadcastGameState(payload) }
+        }
+
+        guard let activeSessionRecordID else { return }
         if session.phase != .finished {
             resilienceService.storeActiveSession(sessionID: activeSessionRecordID, roomCode: session.roomCode)
         } else {
             resilienceService.clearActiveSession()
         }
-        let state = makeSessionStateRecord(from: session)
         let status = session.phase == .finished ? "finalized" : "active"
         Task {
             do {
@@ -2047,6 +2079,14 @@ final class AppViewModel {
 
     private func applyRemoteSessionRecord(_ record: GameSessionRecord) {
         guard let state = record.sessionState else { return }
+        let session = buildSession(fromState: state, sessionID: record.id)
+        isApplyingRemoteSessionState = true
+        defer { isApplyingRemoteSessionState = false }
+        activeSessionRecordID = record.id
+        updateSession(session)
+    }
+
+    private func buildSession(fromState state: SessionStateRecord, sessionID: UUID) -> GameSession {
         let game = GameType(rawValue: state.gameKey)
         let modeString = state.mode
         let mode: GameMode
@@ -2056,8 +2096,8 @@ final class AppViewModel {
         case "teamMode": mode = .teamMode
         default: mode = .multiDevice
         }
-        let session = GameSession(
-            id: record.id, game: game, mode: mode, roomCode: state.roomCode,
+        return GameSession(
+            id: sessionID, game: game, mode: mode, roomCode: state.roomCode,
             players: state.players.map { PlayerProfile(id: $0.id, username: $0.username, isHost: $0.isHost, isReady: $0.isReady, isOnline: $0.isOnline, score: $0.score) },
             rounds: state.rounds.map { GameRound(id: $0.id, index: $0.index, prompt: $0.prompt, activePlayerName: $0.activePlayerName, targetAnswer: $0.targetAnswer, forbiddenWords: $0.forbiddenWords, targetSeconds: $0.targetSeconds) },
             currentRoundIndex: state.currentRoundIndex,
@@ -2153,10 +2193,6 @@ final class AppViewModel {
                 )
             }
         )
-        isApplyingRemoteSessionState = true
-        defer { isApplyingRemoteSessionState = false }
-        activeSessionRecordID = record.id
-        updateSession(session)
     }
 
     private func applySignedOutState() {

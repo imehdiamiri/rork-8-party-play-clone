@@ -295,6 +295,13 @@ nonisolated enum CasualBroadcastEvent: String, Sendable {
     case readyCheckConfirmed = "ready_check_confirmed"
     case readyCheckCancelled = "ready_check_cancelled"
     case roomStateFull = "room_state_full"
+    case gameStateSync = "game_state_sync"
+}
+
+nonisolated struct CasualGameStatePayload: Codable, Sendable {
+    let sessionId: String
+    let originPlayerId: String
+    let state: SessionStateRecord
 }
 
 nonisolated struct GuestSessionStore {

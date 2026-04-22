@@ -27,6 +27,7 @@ final class CasualRoomService {
     var onReadyCheckConfirmed: ((UUID) -> Void)?
     var onReadyCheckCancelled: (() -> Void)?
     var onRoomStateBroadcast: ((CasualRoom) -> Void)?
+    var onGameStateSync: ((CasualGameStatePayload) -> Void)?
 
     init(supabase: SupabaseService = .shared) {
         self.supabase = supabase
@@ -395,6 +396,7 @@ final class CasualRoomService {
         onReadyCheckConfirmed = nil
         onReadyCheckCancelled = nil
         onRoomStateBroadcast = nil
+        onGameStateSync = nil
     }
 
     private func joinChannel(code: String) async throws {
@@ -420,6 +422,7 @@ final class CasualRoomService {
         let readyConfStream = ch.broadcastStream(event: CasualBroadcastEvent.readyCheckConfirmed.rawValue)
         let readyCancelStream = ch.broadcastStream(event: CasualBroadcastEvent.readyCheckCancelled.rawValue)
         let fullStateStream = ch.broadcastStream(event: CasualBroadcastEvent.roomStateFull.rawValue)
+        let gameStateStream = ch.broadcastStream(event: CasualBroadcastEvent.gameStateSync.rawValue)
 
         try await ch.subscribeWithError()
 
@@ -479,8 +482,19 @@ final class CasualRoomService {
                         await self?.handleRoomStateBroadcast(message)
                     }
                 }
+                group.addTask {
+                    for await message in gameStateStream {
+                        guard !Task.isCancelled else { return }
+                        await self?.handleGameStateSync(message)
+                    }
+                }
             }
         }
+    }
+
+    private func handleGameStateSync(_ message: JSONObject) {
+        guard let payload = decodeMessage(message, as: CasualGameStatePayload.self) else { return }
+        onGameStateSync?(payload)
     }
 
     private func handleRoomStateBroadcast(_ message: JSONObject) {
@@ -506,6 +520,10 @@ final class CasualRoomService {
     func broadcastRoomState(_ room: CasualRoom) async {
         let payload = CasualRoomStatePayload(from: room)
         try? await channel?.broadcast(event: CasualBroadcastEvent.roomStateFull.rawValue, message: payload)
+    }
+
+    func broadcastGameState(_ payload: CasualGameStatePayload) async {
+        try? await channel?.broadcast(event: CasualBroadcastEvent.gameStateSync.rawValue, message: payload)
     }
 
     private func handleReadyCheckMessage(_ message: JSONObject, kind: ReadyKind) {
