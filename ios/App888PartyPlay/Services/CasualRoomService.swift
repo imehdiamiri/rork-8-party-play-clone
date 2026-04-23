@@ -79,7 +79,7 @@ final class CasualRoomService {
                 throw CasualRoomError.databaseError(error)
             }
 
-            try await joinChannel(code: code)
+            await joinChannelBestEffort(code: code)
             return try await fetchRoom(roomID: roomID, gameType: gameType, settings: settings)
         }
 
@@ -119,7 +119,7 @@ final class CasualRoomService {
             throw CasualRoomError.connectionFailed
         }
 
-        try await joinChannel(code: normalizedCode)
+        await joinChannelBestEffort(code: normalizedCode)
         await notifyRoomUpdate()
 
         let roomRecord: CasualRoomRecord = try await supabase.client
@@ -439,7 +439,7 @@ final class CasualRoomService {
         let room = try await fetchRoom(roomID: roomRecord.id, gameType: gameType, settings: settings)
         let player = playerRecord.toGuestPlayer()
 
-        try await joinChannel(code: roomRecord.roomCode)
+        await joinChannelBestEffort(code: roomRecord.roomCode)
 
         return (room, player)
     }
@@ -527,6 +527,19 @@ final class CasualRoomService {
         onRoomStateBroadcast = nil
         onGameStateSync = nil
         onSnapshotRequest = nil
+    }
+
+    private func joinChannelBestEffort(code: String) async {
+        for attempt in 0..<3 {
+            do {
+                try await joinChannel(code: code)
+                return
+            } catch is CancellationError {
+                if attempt < 2 { try? await Task.sleep(for: .milliseconds(400)) }
+            } catch {
+                if attempt < 2 { try? await Task.sleep(for: .milliseconds(400)) }
+            }
+        }
     }
 
     private func joinChannel(code: String) async throws {
