@@ -5,8 +5,7 @@ import Observation
 // SAFETY NOTE:
 // - This view model only reads the locally bundled `CardDeckSeed`.
 // - No remote fetching, no feature flags, no server-side content switching.
-// - The 18+/adult content path has been removed end-to-end. The `include18Plus`
-//   parameters below are kept for source compatibility but are ignored.
+// - No 18+ or adult content path exists. Only two tiers: normal and spicy.
 @Observable
 @MainActor
 final class CardsViewModel {
@@ -35,7 +34,7 @@ final class CardsViewModel {
         CardDeckSeed.cards(for: category)
     }
 
-    func count(for category: CardCategory, include18Plus: Bool = true) -> Int {
+    func count(for category: CardCategory) -> Int {
         CardDeckSeed.cards(for: category).count
     }
 
@@ -43,7 +42,6 @@ final class CardsViewModel {
         category: CardCategory,
         subtype: CardSubtype?,
         includeSpicy: Bool,
-        include18Plus: Bool = false,
         excluding currentID: UUID?
     ) -> PartyCard? {
         let allowed = CardDeckSeed.cards(for: category).filter { card in

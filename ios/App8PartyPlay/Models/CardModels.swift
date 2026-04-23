@@ -118,16 +118,14 @@ nonisolated enum CardSubtype: String, CaseIterable, Identifiable, Hashable, Send
 
 
 // SAFETY NOTE: This app does NOT expose any 18+ or adult-only content.
-// The `is18Plus` flag is retained as a compile-time constant `false` for binary
-// compatibility with persisted data, and is never set to true anywhere.
 // All card content is bundled locally and reviewable in `CardDeckSeed`.
+// Content is limited to two tiers: normal and spicy (playful/flirty, party-appropriate).
 nonisolated struct PartyCard: Identifiable, Hashable, Sendable, Codable {
     let id: UUID
     let category: CardCategory
     let subtype: CardSubtype
     let text: String
     let isSpicy: Bool
-    let is18Plus: Bool
     let isPremium: Bool
 
     init(
@@ -136,7 +134,6 @@ nonisolated struct PartyCard: Identifiable, Hashable, Sendable, Codable {
         subtype: CardSubtype,
         text: String,
         isSpicy: Bool = false,
-        is18Plus: Bool = false,
         isPremium: Bool = false
     ) {
         self.id = id
@@ -144,7 +141,6 @@ nonisolated struct PartyCard: Identifiable, Hashable, Sendable, Codable {
         self.subtype = subtype
         self.text = text
         self.isSpicy = isSpicy
-        self.is18Plus = false
         self.isPremium = isSpicy || isPremium
     }
 }
@@ -162,27 +158,25 @@ nonisolated enum CardDeckSeed {
         }
     }
 
-    /// SAFETY NOTE: `.adult` and `.adultOnly` legacy flags are intentionally
-    /// mapped to `.spicy` behavior with `is18Plus` forced to false. The app no
-    /// longer surfaces any 18+ content. This mapping keeps the bundled dataset
-    /// intact while removing the adult classification end-to-end.
+    /// SAFETY NOTE: Only two content tiers exist: `.normal` and `.spicy`.
+    /// No 18+ or adult-only classification is present anywhere in the app.
+    /// All content is bundled locally and fully reviewable.
     private static func make(_ category: CardCategory, _ entries: [(String, CardSubtype, Flag)]) -> [PartyCard] {
         entries.map { text, subtype, flag in
             PartyCard(
                 category: category,
                 subtype: subtype,
                 text: text,
-                isSpicy: flag != .normal,
-                is18Plus: false
+                isSpicy: flag == .spicy
             )
         }
     }
 
-    private enum Flag { case normal, spicy, adult, adultOnly }
+    private enum Flag { case normal, spicy }
 
     // MARK: ACT (160)
     private static let act: [PartyCard] = make(.act, [
-        // Pantomime (50) — 30 normal, 13 spicy, 7 adult
+        // Pantomime (50) — normal + spicy
         ("Angry boss", .pantomime, .normal),
         ("Elephant", .pantomime, .normal),
         ("Driving a car in rush hour", .pantomime, .normal),
@@ -226,15 +220,15 @@ nonisolated enum CardDeckSeed {
         ("Slow wink from across the room", .pantomime, .spicy),
         ("Texting someone you shouldn't", .pantomime, .spicy),
         ("Caught in a lie by your date", .pantomime, .spicy),
-        ("Undressing after a long day", .pantomime, .adult),
-        ("Couple on their wedding night", .pantomime, .adult),
-        ("Someone sneaking in very late", .pantomime, .adult),
-        ("A wild night at a club", .pantomime, .adult),
-        ("Private dance for one", .pantomime, .adult),
-        ("Morning after a party", .pantomime, .adult),
-        ("Intense makeout interrupted", .pantomime, .adult),
+        ("Undressing after a long day", .pantomime, .spicy),
+        ("Couple on their wedding night", .pantomime, .spicy),
+        ("Someone sneaking in very late", .pantomime, .spicy),
+        ("A wild night at a club", .pantomime, .spicy),
+        ("Private dance for one", .pantomime, .spicy),
+        ("Morning after a party", .pantomime, .spicy),
+        ("Intense makeout interrupted", .pantomime, .spicy),
 
-        // Dare (60) — 36 normal, 15 spicy, 9 adult
+        // Dare (60) — normal + spicy
         ("Dance without music for 20 seconds", .dare, .normal),
         ("Do your best runway walk across the room", .dare, .normal),
         ("Talk in a dramatic voice until your next turn", .dare, .normal),
@@ -286,17 +280,17 @@ nonisolated enum CardDeckSeed {
         ("Strike a glamour pose and hold it for 10 seconds", .dare, .spicy),
         ("Give someone here a compliment about their looks", .dare, .spicy),
         ("Do a sultry runway walk to the kitchen", .dare, .spicy),
-        ("Slow dance with the player on your left for 10 seconds", .dare, .adult),
-        ("Whisper the last dirty thought you had to the group", .dare, .adult),
-        ("Say the name of someone you had a crush on secretly", .dare, .adult),
-        ("Let the group pick a name to text back right now", .dare, .adult),
-        ("Describe your ideal first kiss in one sentence", .dare, .adult),
-        ("Confess the last text you regret sending", .dare, .adult),
-        ("Give someone here a 3 second neck kiss on the cheek", .dare, .adult),
-        ("Reveal the wildest place you've ever kissed someone", .dare, .adult),
-        ("Tell the group your favorite type of kiss", .dare, .adult),
+        ("Slow dance with the player on your left for 10 seconds", .dare, .spicy),
+        ("Whisper the last dirty thought you had to the group", .dare, .spicy),
+        ("Say the name of someone you had a crush on secretly", .dare, .spicy),
+        ("Let the group pick a name to text back right now", .dare, .spicy),
+        ("Describe your ideal first kiss in one sentence", .dare, .spicy),
+        ("Confess the last text you regret sending", .dare, .spicy),
+        ("Give someone here a 3 second neck kiss on the cheek", .dare, .spicy),
+        ("Reveal the wildest place you've ever kissed someone", .dare, .spicy),
+        ("Tell the group your favorite type of kiss", .dare, .spicy),
 
-        // Funny Action (50) — 30 normal, 13 spicy, 7 adult
+        // Funny Action (50) — normal + spicy
         ("Act like a jealous taxi driver", .funnyAction, .normal),
         ("Walk like a penguin to the kitchen and back", .funnyAction, .normal),
         ("Pretend you are invisible for 30 seconds", .funnyAction, .normal),
@@ -340,18 +334,18 @@ nonisolated enum CardDeckSeed {
         ("Act like a bachelor giving out his rose", .funnyAction, .spicy),
         ("Pretend your phone buzzed from a secret crush", .funnyAction, .spicy),
         ("Do your best impression of a smooth romantic", .funnyAction, .spicy),
-        ("Act out a dramatic couple's fight over pasta", .funnyAction, .adult),
-        ("Pretend to be caught at 3am coming home", .funnyAction, .adult),
-        ("Do a dramatic sultry pose for 10 seconds", .funnyAction, .adult),
-        ("Act out an awkward morning after breakfast", .funnyAction, .adult),
-        ("Pretend to sneak around avoiding a roommate", .funnyAction, .adult),
-        ("Do a dramatic scene of ordering something risky online", .funnyAction, .adult),
-        ("Act out forgetting their name mid hookup", .funnyAction, .adult)
+        ("Act out a dramatic couple's fight over pasta", .funnyAction, .spicy),
+        ("Pretend to be caught at 3am coming home", .funnyAction, .spicy),
+        ("Do a dramatic sultry pose for 10 seconds", .funnyAction, .spicy),
+        ("Act out an awkward morning after breakfast", .funnyAction, .spicy),
+        ("Pretend to sneak around avoiding a roommate", .funnyAction, .spicy),
+        ("Do a dramatic scene of ordering something risky online", .funnyAction, .spicy),
+        ("Act out forgetting their name mid hookup", .funnyAction, .spicy)
     ])
 
     // MARK: TALK (200)
     private static let talk: [PartyCard] = make(.talk, [
-        // Starters (40) — 24 / 10 / 6
+        // Starters (40) — normal + spicy
         ("Where are you from?", .starters, .normal),
         ("What do you like doing on weekends?", .starters, .normal),
         ("What kind of music do you enjoy most?", .starters, .normal),
@@ -386,14 +380,14 @@ nonisolated enum CardDeckSeed {
         ("Do you like bold people or calm people more?", .starters, .spicy),
         ("What compliment style works on you best?", .starters, .spicy),
         ("What makes a conversation feel flirty in a good way?", .starters, .spicy),
-        ("What is something charming that people rarely do anymore?", .starters, .adult),
-        ("What makes late night conversations more memorable for you?", .starters, .adult),
-        ("What kind of chemistry do you notice first?", .starters, .adult),
-        ("What is one dating rule you actually believe in?", .starters, .adult),
-        ("What turns a good conversation into real tension for you?", .starters, .adult),
-        ("What kind of confidence do you find hardest to ignore?", .starters, .adult),
+        ("What is something charming that people rarely do anymore?", .starters, .spicy),
+        ("What makes late night conversations more memorable for you?", .starters, .spicy),
+        ("What kind of chemistry do you notice first?", .starters, .spicy),
+        ("What is one dating rule you actually believe in?", .starters, .spicy),
+        ("What turns a good conversation into real tension for you?", .starters, .spicy),
+        ("What kind of confidence do you find hardest to ignore?", .starters, .spicy),
 
-        // Personal (50) — 30 / 13 / 7
+        // Personal (50) — normal + spicy
         ("What is one thing people always misunderstand about you?", .personal, .normal),
         ("What is your favorite childhood memory?", .personal, .normal),
         ("What small thing annoys you way more than it should?", .personal, .normal),
@@ -437,15 +431,15 @@ nonisolated enum CardDeckSeed {
         ("What do you find irresistible in a person?", .personal, .spicy),
         ("What is the bravest thing you've done for love?", .personal, .spicy),
         ("What makes you feel most confident?", .personal, .spicy),
-        ("What is a secret crush you had and never told anyone?", .personal, .adult),
-        ("What is the longest you've ever waited for someone?", .personal, .adult),
-        ("What is your worst dating story?", .personal, .adult),
-        ("What is a private rule you set for yourself in relationships?", .personal, .adult),
-        ("What is something you regret doing to impress someone?", .personal, .adult),
-        ("When was the last time you felt truly desired?", .personal, .adult),
-        ("What is a secret fear in your current or past relationships?", .personal, .adult),
+        ("What is a secret crush you had and never told anyone?", .personal, .spicy),
+        ("What is the longest you've ever waited for someone?", .personal, .spicy),
+        ("What is your worst dating story?", .personal, .spicy),
+        ("What is a private rule you set for yourself in relationships?", .personal, .spicy),
+        ("What is something you regret doing to impress someone?", .personal, .spicy),
+        ("When was the last time you felt truly desired?", .personal, .spicy),
+        ("What is a secret fear in your current or past relationships?", .personal, .spicy),
 
-        // Discussion (40) — 24 / 10 / 6
+        // Discussion (40) — normal + spicy
         ("Is money more important than happiness?", .discussion, .normal),
         ("Can people really change?", .discussion, .normal),
         ("Is social media doing more harm than good?", .discussion, .normal),
@@ -480,14 +474,14 @@ nonisolated enum CardDeckSeed {
         ("Is it okay to keep a crush a secret forever?", .discussion, .spicy),
         ("Should you follow your crush on social media?", .discussion, .spicy),
         ("Is dating apps killing real romance?", .discussion, .spicy),
-        ("Is monogamy realistic for everyone?", .discussion, .adult),
-        ("Should exes stay completely out of your life?", .discussion, .adult),
-        ("Is emotional cheating worse than physical?", .discussion, .adult),
-        ("Is it okay to keep a sexy secret from your partner?", .discussion, .adult),
-        ("Do open relationships work long term?", .discussion, .adult),
-        ("Is desire something you can really control?", .discussion, .adult),
+        ("Is monogamy realistic for everyone?", .discussion, .spicy),
+        ("Should exes stay completely out of your life?", .discussion, .spicy),
+        ("Is emotional cheating worse than physical?", .discussion, .spicy),
+        ("Is it okay to keep a sexy secret from your partner?", .discussion, .spicy),
+        ("Do open relationships work long term?", .discussion, .spicy),
+        ("Is desire something you can really control?", .discussion, .spicy),
 
-        // Truth (40) — 24 / 10 / 6
+        // Truth (40) — normal + spicy
         ("What is your biggest regret?", .truth, .normal),
         ("What is something you never admitted openly?", .truth, .normal),
         ("Who in this room do you trust the most and why?", .truth, .normal),
@@ -522,14 +516,14 @@ nonisolated enum CardDeckSeed {
         ("Have you ever stalked an ex online recently?", .truth, .spicy),
         ("What is the most you've ever fought for a crush?", .truth, .spicy),
         ("Have you ever kissed someone just to prove a point?", .truth, .spicy),
-        ("Who in this room would you flirt with if you were single?", .truth, .adult),
-        ("What is the riskiest text you ever sent?", .truth, .adult),
-        ("Have you ever crushed on a friend's partner?", .truth, .adult),
-        ("Have you ever lied about being single?", .truth, .adult),
-        ("What is the wildest thing you've done for attention?", .truth, .adult),
-        ("What is a secret from your last relationship you never told?", .truth, .adult),
+        ("Who in this room would you flirt with if you were single?", .truth, .spicy),
+        ("What is the riskiest text you ever sent?", .truth, .spicy),
+        ("Have you ever crushed on a friend's partner?", .truth, .spicy),
+        ("Have you ever lied about being single?", .truth, .spicy),
+        ("What is the wildest thing you've done for attention?", .truth, .spicy),
+        ("What is a secret from your last relationship you never told?", .truth, .spicy),
 
-        // Explain / Guess (30) — 18 / 7 / 5
+        // Explain / Guess (30) — normal + spicy
         ("Time travel", .explainGuess, .normal),
         ("Broken phone", .explainGuess, .normal),
         ("Cold pizza", .explainGuess, .normal),
@@ -555,16 +549,16 @@ nonisolated enum CardDeckSeed {
         ("Third wheel dinner", .explainGuess, .spicy),
         ("Blind date disaster", .explainGuess, .spicy),
         ("Drunken confession", .explainGuess, .spicy),
-        ("One night in Vegas", .explainGuess, .adult),
-        ("Love bite", .explainGuess, .adult),
-        ("Forbidden romance", .explainGuess, .adult),
-        ("Wedding night nerves", .explainGuess, .adult),
-        ("Secret lover", .explainGuess, .adult)
+        ("One night in Vegas", .explainGuess, .spicy),
+        ("Love bite", .explainGuess, .spicy),
+        ("Forbidden romance", .explainGuess, .spicy),
+        ("Wedding night nerves", .explainGuess, .spicy),
+        ("Secret lover", .explainGuess, .spicy)
     ])
 
     // MARK: CHALLENGES (140)
     private static let challenges: [PartyCard] = make(.challenges, [
-        // Speech (50) — 30 / 13 / 7
+        // Speech (50) — normal + spicy
         ("Do not say yes for 1 minute", .speech, .normal),
         ("Talk like a robot for 30 seconds", .speech, .normal),
         ("Only ask questions until your next turn", .speech, .normal),
@@ -608,15 +602,15 @@ nonisolated enum CardDeckSeed {
         ("Use the word darling in every sentence for 2 minutes", .speech, .spicy),
         ("Pretend every sentence is a love confession for 1 minute", .speech, .spicy),
         ("Flirt with every object you name for 30 seconds", .speech, .spicy),
-        ("Speak only in sultry whispers until your next turn", .speech, .adult),
-        ("Say a risky compliment to each player, one at a time", .speech, .adult),
-        ("Only speak in rated R dialogue for 30 seconds", .speech, .adult),
-        ("Whisper one bold secret into the group's silence", .speech, .adult),
-        ("Narrate your last date as a steamy book", .speech, .adult),
-        ("Turn every sentence into a pickup line for 1 minute", .speech, .adult),
-        ("Pretend to confess a crush every 15 seconds for 1 minute", .speech, .adult),
+        ("Speak only in sultry whispers until your next turn", .speech, .spicy),
+        ("Say a risky compliment to each player, one at a time", .speech, .spicy),
+        ("Only speak in rated R dialogue for 30 seconds", .speech, .spicy),
+        ("Whisper one bold secret into the group's silence", .speech, .spicy),
+        ("Narrate your last date as a steamy book", .speech, .spicy),
+        ("Turn every sentence into a pickup line for 1 minute", .speech, .spicy),
+        ("Pretend to confess a crush every 15 seconds for 1 minute", .speech, .spicy),
 
-        // Behavior (50) — 30 / 13 / 7
+        // Behavior (50) — normal + spicy
         ("Do not laugh for 1 minute", .behavior, .normal),
         ("Use only one hand until your next turn", .behavior, .normal),
         ("Keep a serious face for 30 seconds while we try to break you", .behavior, .normal),
@@ -660,15 +654,15 @@ nonisolated enum CardDeckSeed {
         ("Blow a kiss after every answer for 1 minute", .behavior, .spicy),
         ("Sit on the floor in a glamorous pose until your next turn", .behavior, .spicy),
         ("Pretend to be on a runway while speaking for 30 seconds", .behavior, .spicy),
-        ("Flirt with one player silently for the next 30 seconds", .behavior, .adult),
-        ("Keep a sultry expression for 30 seconds no matter what", .behavior, .adult),
-        ("Touch your own shoulder softly before every sentence for 1 minute", .behavior, .adult),
-        ("Pretend you're in a music video every time you move for 1 minute", .behavior, .adult),
-        ("Keep one hand near your collarbone until your next turn", .behavior, .adult),
-        ("Give one slow wink to each player without saying a word", .behavior, .adult),
-        ("Strike a magazine cover pose every 20 seconds for 1 minute", .behavior, .adult),
+        ("Flirt with one player silently for the next 30 seconds", .behavior, .spicy),
+        ("Keep a sultry expression for 30 seconds no matter what", .behavior, .spicy),
+        ("Touch your own shoulder softly before every sentence for 1 minute", .behavior, .spicy),
+        ("Pretend you're in a music video every time you move for 1 minute", .behavior, .spicy),
+        ("Keep one hand near your collarbone until your next turn", .behavior, .spicy),
+        ("Give one slow wink to each player without saying a word", .behavior, .spicy),
+        ("Strike a magazine cover pose every 20 seconds for 1 minute", .behavior, .spicy),
 
-        // Time Limit (40) — 24 / 10 / 6
+        // Time Limit (40) — normal + spicy
         ("Explain yourself in exactly 5 words", .timeLimit, .normal),
         ("Say three genuine compliments in 10 seconds", .timeLimit, .normal),
         ("Make someone in the room laugh in 15 seconds", .timeLimit, .normal),
@@ -703,17 +697,17 @@ nonisolated enum CardDeckSeed {
         ("Pitch yourself on a dating app in 15 seconds", .timeLimit, .spicy),
         ("Describe your love language in 10 seconds", .timeLimit, .spicy),
         ("List 3 flirting tricks that work on you in 15 seconds", .timeLimit, .spicy),
-        ("Whisper something bold in someone's ear within 10 seconds", .timeLimit, .adult),
-        ("Confess a crush name in exactly 3 words within 10 seconds", .timeLimit, .adult),
-        ("Describe your wildest dream in 15 seconds", .timeLimit, .adult),
-        ("Rate the last kiss you had in 5 seconds", .timeLimit, .adult),
-        ("Share a bold confession in exactly 10 words", .timeLimit, .adult),
-        ("Give a sultry compliment to someone here in 10 seconds", .timeLimit, .adult)
+        ("Whisper something bold in someone's ear within 10 seconds", .timeLimit, .spicy),
+        ("Confess a crush name in exactly 3 words within 10 seconds", .timeLimit, .spicy),
+        ("Describe your wildest dream in 15 seconds", .timeLimit, .spicy),
+        ("Rate the last kiss you had in 5 seconds", .timeLimit, .spicy),
+        ("Share a bold confession in exactly 10 words", .timeLimit, .spicy),
+        ("Give a sultry compliment to someone here in 10 seconds", .timeLimit, .spicy)
     ])
 
     // MARK: PENALTY (120)
     private static let penalty: [PartyCard] = make(.penalty, [
-        // Penalty Funny (50) — 30 / 13 / 7
+        // Penalty Funny (50) — normal + spicy
         ("Talk like a baby for 30 seconds", .penaltyFunny, .normal),
         ("Sing one sentence dramatically like an opera singer", .penaltyFunny, .normal),
         ("Do 5 silly jumps in a row", .penaltyFunny, .normal),
@@ -757,15 +751,15 @@ nonisolated enum CardDeckSeed {
         ("Pretend to take a flirty selfie with each player", .penaltyFunny, .spicy),
         ("Do a cheesy flirty wink at the whole room", .penaltyFunny, .spicy),
         ("Walk across the room like you own a nightclub", .penaltyFunny, .spicy),
-        ("Pretend to lose a lover in a dramatic death scene", .penaltyFunny, .adult),
-        ("Act out stumbling home after a wild night", .penaltyFunny, .adult),
-        ("Do a telenovela breakup scene for 20 seconds", .penaltyFunny, .adult),
-        ("Pretend to sneak in at 4am while your parents watch", .penaltyFunny, .adult),
-        ("Recite your dating resume out loud with style", .penaltyFunny, .adult),
-        ("Pretend to accept a fake marriage proposal in tears", .penaltyFunny, .adult),
-        ("Do a dramatic confession scene like a rom com", .penaltyFunny, .adult),
+        ("Pretend to lose a lover in a dramatic death scene", .penaltyFunny, .spicy),
+        ("Act out stumbling home after a wild night", .penaltyFunny, .spicy),
+        ("Do a telenovela breakup scene for 20 seconds", .penaltyFunny, .spicy),
+        ("Pretend to sneak in at 4am while your parents watch", .penaltyFunny, .spicy),
+        ("Recite your dating resume out loud with style", .penaltyFunny, .spicy),
+        ("Pretend to accept a fake marriage proposal in tears", .penaltyFunny, .spicy),
+        ("Do a dramatic confession scene like a rom com", .penaltyFunny, .spicy),
 
-        // Embarrassing (40) — 24 / 10 / 6
+        // Embarrassing (40) — normal + spicy
         ("Let the group give you a nickname for the night", .embarrassing, .normal),
         ("Speak with an accent until your next turn", .embarrassing, .normal),
         ("Give yourself a dramatic wrestler style introduction", .embarrassing, .normal),
@@ -800,14 +794,14 @@ nonisolated enum CardDeckSeed {
         ("Confess one old text you wish you could delete", .embarrassing, .spicy),
         ("Say a romantic line in the cheesiest voice possible", .embarrassing, .spicy),
         ("Read the last compliment you got from a crush", .embarrassing, .spicy),
-        ("Let the group write a flirty bio and read it out loud", .embarrassing, .adult),
-        ("Share the name of someone you shouldn't have texted", .embarrassing, .adult),
-        ("Confess the last bold move you ever made for love", .embarrassing, .adult),
-        ("Show the group your oldest selfie on your phone", .embarrassing, .adult),
-        ("Tell the group the first song on your romantic playlist", .embarrassing, .adult),
-        ("Say your most embarrassing dating moment out loud", .embarrassing, .adult),
+        ("Let the group write a flirty bio and read it out loud", .embarrassing, .spicy),
+        ("Share the name of someone you shouldn't have texted", .embarrassing, .spicy),
+        ("Confess the last bold move you ever made for love", .embarrassing, .spicy),
+        ("Show the group your oldest selfie on your phone", .embarrassing, .spicy),
+        ("Tell the group the first song on your romantic playlist", .embarrassing, .spicy),
+        ("Say your most embarrassing dating moment out loud", .embarrassing, .spicy),
 
-        // Group Choice (30) — 18 / 8 / 4
+        // Group Choice (30) — normal + spicy
         ("Let the group choose your pose for a photo", .groupChoice, .normal),
         ("Let the group choose your voice for the next round", .groupChoice, .normal),
         ("Let the group pick one harmless rule for you until the next round", .groupChoice, .normal),
@@ -834,15 +828,15 @@ nonisolated enum CardDeckSeed {
         ("Let the group choose a romantic song you must hum", .groupChoice, .spicy),
         ("Let the group pick a flirty pose you must hold for 15 seconds", .groupChoice, .spicy),
         ("Let the group decide one flirty rule for the night", .groupChoice, .spicy),
-        ("Let the group choose a bold confession for you to make", .groupChoice, .adult),
-        ("Let the group pick the last person you should text tonight", .groupChoice, .adult),
-        ("Let the group choose a risky rule you must follow", .groupChoice, .adult),
-        ("Let the group decide a daring dare for you", .groupChoice, .adult)
+        ("Let the group choose a bold confession for you to make", .groupChoice, .spicy),
+        ("Let the group pick the last person you should text tonight", .groupChoice, .spicy),
+        ("Let the group choose a risky rule you must follow", .groupChoice, .spicy),
+        ("Let the group decide a daring dare for you", .groupChoice, .spicy)
     ])
 
     // MARK: COUPLE (140)
     private static let couple: [PartyCard] = make(.couple, [
-        // Couple Questions (60) — 36 / 15 / 9
+        // Couple Questions (60) — normal + spicy
         ("What was your first impression of each other?", .coupleQuestions, .normal),
         ("Who said sorry first after your last fight?", .coupleQuestions, .normal),
         ("What is one thing your partner does that always makes you smile?", .coupleQuestions, .normal),
@@ -894,17 +888,17 @@ nonisolated enum CardDeckSeed {
         ("What is a cheesy thing you secretly love doing together?", .coupleQuestions, .spicy),
         ("What is the most romantic thing your partner has ever done?", .coupleQuestions, .spicy),
         ("What is a shy thing you wanted to ask but never did?", .coupleQuestions, .spicy),
-        ("What is something you have been afraid to ask each other?", .coupleQuestions, .adult),
-        ("What is the most intimate memory you share?", .coupleQuestions, .adult),
-        ("What is a fantasy you've never told your partner?", .coupleQuestions, .adult),
-        ("What is a secret desire you've been holding back?", .coupleQuestions, .adult),
-        ("What was your most passionate moment together?", .coupleQuestions, .adult),
-        ("What is something bold you want to try together?", .coupleQuestions, .adult),
-        ("What is a private thing you miss when apart?", .coupleQuestions, .adult),
-        ("What is the boldest confession you can give each other now?", .coupleQuestions, .adult),
-        ("What is a favorite memory from your first few nights together?", .coupleQuestions, .adult),
+        ("What is something you have been afraid to ask each other?", .coupleQuestions, .spicy),
+        ("What is the most intimate memory you share?", .coupleQuestions, .spicy),
+        ("What is a fantasy you've never told your partner?", .coupleQuestions, .spicy),
+        ("What is a secret desire you've been holding back?", .coupleQuestions, .spicy),
+        ("What was your most passionate moment together?", .coupleQuestions, .spicy),
+        ("What is something bold you want to try together?", .coupleQuestions, .spicy),
+        ("What is a private thing you miss when apart?", .coupleQuestions, .spicy),
+        ("What is the boldest confession you can give each other now?", .coupleQuestions, .spicy),
+        ("What is a favorite memory from your first few nights together?", .coupleQuestions, .spicy),
 
-        // Dynamics (40) — 24 / 10 / 6
+        // Dynamics (40) — normal + spicy
         ("Who gets jealous faster?", .dynamics, .normal),
         ("Who talks more when upset?", .dynamics, .normal),
         ("Who is more stubborn in arguments?", .dynamics, .normal),
@@ -939,14 +933,14 @@ nonisolated enum CardDeckSeed {
         ("Who is more likely to plan a surprise date?", .dynamics, .spicy),
         ("Who says I love you first, more often?", .dynamics, .spicy),
         ("Who is more romantic in text messages?", .dynamics, .spicy),
-        ("Who starts flirting first after a fight?", .dynamics, .adult),
-        ("Who is more open about desires?", .dynamics, .adult),
-        ("Who pushes boundaries more in private?", .dynamics, .adult),
-        ("Who is bolder after midnight?", .dynamics, .adult),
-        ("Who is more likely to send a risky text?", .dynamics, .adult),
-        ("Who sets the mood better?", .dynamics, .adult),
+        ("Who starts flirting first after a fight?", .dynamics, .spicy),
+        ("Who is more open about desires?", .dynamics, .spicy),
+        ("Who pushes boundaries more in private?", .dynamics, .spicy),
+        ("Who is bolder after midnight?", .dynamics, .spicy),
+        ("Who is more likely to send a risky text?", .dynamics, .spicy),
+        ("Who sets the mood better?", .dynamics, .spicy),
 
-        // Playful (40) — 24 / 10 / 6
+        // Playful (40) — normal + spicy
         ("Describe your partner in exactly one word", .playful, .normal),
         ("Say one thing you secretly admire about each other", .playful, .normal),
         ("Who would survive longer on a bad trip together?", .playful, .normal),
@@ -981,17 +975,17 @@ nonisolated enum CardDeckSeed {
         ("Write a flirty caption you would post for your partner", .playful, .spicy),
         ("Describe the best kiss you've ever had together", .playful, .spicy),
         ("Give each other one flirty compliment right now", .playful, .spicy),
-        ("Describe a fantasy you've kept to yourself until now", .playful, .adult),
-        ("Share one bold thing you want to do together this year", .playful, .adult),
-        ("Whisper a private compliment to each other", .playful, .adult),
-        ("Share the wildest memory you have together", .playful, .adult),
-        ("Describe the most intimate look you've shared", .playful, .adult),
-        ("Say one thing you miss most when you're alone", .playful, .adult)
+        ("Describe a fantasy you've kept to yourself until now", .playful, .spicy),
+        ("Share one bold thing you want to do together this year", .playful, .spicy),
+        ("Whisper a private compliment to each other", .playful, .spicy),
+        ("Share the wildest memory you have together", .playful, .spicy),
+        ("Describe the most intimate look you've shared", .playful, .spicy),
+        ("Say one thing you miss most when you're alone", .playful, .spicy)
     ])
 
     // MARK: TALK — ICEBREAKER (128)
     private static let talkIcebreaker: [PartyCard] = make(.talk, [
-        // Intro (30) — 18 / 8 / 4
+        // Intro (30) — normal + spicy
         ("Say your name and one weird fact about yourself", .icebreaker, .normal),
         ("Tell us one thing people usually guess wrong about you", .icebreaker, .normal),
         ("What is one word your friends would use to describe you?", .icebreaker, .normal),
@@ -1018,12 +1012,12 @@ nonisolated enum CardDeckSeed {
         ("Introduce yourself using your ideal type in one sentence", .icebreaker, .spicy),
         ("Share your name and the last crush fact you can reveal", .icebreaker, .spicy),
         ("Say your name like you're introducing yourself on a dating show", .icebreaker, .spicy),
-        ("Introduce yourself with one bold truth about your love life", .icebreaker, .adult),
-        ("Say your name and the wildest place you've traveled", .icebreaker, .adult),
-        ("Share your name and the last risky decision you took", .icebreaker, .adult),
-        ("Introduce yourself like you're the lead of a romance novel", .icebreaker, .adult),
+        ("Introduce yourself with one bold truth about your love life", .icebreaker, .spicy),
+        ("Say your name and the wildest place you've traveled", .icebreaker, .spicy),
+        ("Share your name and the last risky decision you took", .icebreaker, .spicy),
+        ("Introduce yourself like you're the lead of a romance novel", .icebreaker, .spicy),
 
-        // Icebreaker Fun (35) — 21 / 9 / 5
+        // Icebreaker Fun (35) — normal + spicy
         ("Introduce yourself like a celebrity on the red carpet", .icebreaker, .normal),
         ("Say what animal matches your personality today", .icebreaker, .normal),
         ("If your life was a show, what would the title be?", .icebreaker, .normal),
@@ -1054,13 +1048,13 @@ nonisolated enum CardDeckSeed {
         ("Describe your love language in one word", .icebreaker, .spicy),
         ("Share one romantic habit you secretly love", .icebreaker, .spicy),
         ("Say what song would play if you entered a dating show", .icebreaker, .spicy),
-        ("Say the boldest thing you've done for attention", .icebreaker, .adult),
-        ("Describe your most memorable date in one sentence", .icebreaker, .adult),
-        ("Share one thing that always makes you flirt back", .icebreaker, .adult),
-        ("Share your wildest travel story in one line", .icebreaker, .adult),
-        ("Introduce yourself with a daring truth most people don't know", .icebreaker, .adult),
+        ("Say the boldest thing you've done for attention", .icebreaker, .spicy),
+        ("Describe your most memorable date in one sentence", .icebreaker, .spicy),
+        ("Share one thing that always makes you flirt back", .icebreaker, .spicy),
+        ("Share your wildest travel story in one line", .icebreaker, .spicy),
+        ("Introduce yourself with a daring truth most people don't know", .icebreaker, .spicy),
 
-        // Quick Topic (35) — 21 / 9 / 5
+        // Quick Topic (35) — normal + spicy
         ("Morning person or night person?", .icebreaker, .normal),
         ("City life or nature?", .icebreaker, .normal),
         ("Coffee or tea, and why?", .icebreaker, .normal),
@@ -1091,13 +1085,13 @@ nonisolated enum CardDeckSeed {
         ("Eye contact or sneaky smile?", .icebreaker, .spicy),
         ("Forehead kiss or hand kiss?", .icebreaker, .spicy),
         ("Morning cuddles or goodnight messages?", .icebreaker, .spicy),
-        ("Long kisses or playful kisses?", .icebreaker, .adult),
-        ("Whispered secrets or bold confessions?", .icebreaker, .adult),
-        ("Candlelight or rooftop moonlight?", .icebreaker, .adult),
-        ("Slow dance or late night drive?", .icebreaker, .adult),
-        ("Say it out loud or write it in a note?", .icebreaker, .adult),
+        ("Long kisses or playful kisses?", .icebreaker, .spicy),
+        ("Whispered secrets or bold confessions?", .icebreaker, .spicy),
+        ("Candlelight or rooftop moonlight?", .icebreaker, .spicy),
+        ("Slow dance or late night drive?", .icebreaker, .spicy),
+        ("Say it out loud or write it in a note?", .icebreaker, .spicy),
 
-        // Light Action (28) — 17 / 7 / 4
+        // Light Action (28) — normal + spicy
         ("Make everyone laugh in 10 seconds", .icebreaker, .normal),
         ("Show your current mood using only your face", .icebreaker, .normal),
         ("Do your most dramatic hello right now", .icebreaker, .normal),
@@ -1122,9 +1116,9 @@ nonisolated enum CardDeckSeed {
         ("Do a sultry slow wave to the group", .icebreaker, .spicy),
         ("Walk like a runway model across the room", .icebreaker, .spicy),
         ("Do your boldest magazine cover pose", .icebreaker, .spicy),
-        ("Share a slow wink with each player in order", .icebreaker, .adult),
-        ("Do a dramatic slow dance pose for 10 seconds", .icebreaker, .adult),
-        ("Give your best intense gaze to the group", .icebreaker, .adult),
-        ("Pretend to lower your sunglasses slowly and hold eye contact", .icebreaker, .adult)
+        ("Share a slow wink with each player in order", .icebreaker, .spicy),
+        ("Do a dramatic slow dance pose for 10 seconds", .icebreaker, .spicy),
+        ("Give your best intense gaze to the group", .icebreaker, .spicy),
+        ("Pretend to lower your sunglasses slowly and hold eye contact", .icebreaker, .spicy)
     ])
 }

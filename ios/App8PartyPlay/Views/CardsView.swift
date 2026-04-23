@@ -60,7 +60,7 @@ struct CardsRootView: View {
     }
 
     private var totalCardsCount: Int {
-        CardCategory.allCases.reduce(0) { $0 + viewModel.count(for: $1, include18Plus: true) }
+        CardCategory.allCases.reduce(0) { $0 + viewModel.count(for: $1) }
     }
 
     private var header: some View {
@@ -201,7 +201,7 @@ struct CardsRootView: View {
                         } label: {
                             CategoryListRow(
                                 category: category,
-                                count: viewModel.count(for: category, include18Plus: true)
+                                count: viewModel.count(for: category)
                             )
                         }
                         .buttonStyle(CardPressStyle())
@@ -606,9 +606,9 @@ struct CardsDeckView: View {
             Divider().overlay(.white.opacity(0.06))
 
             // Content toggles
-            // SAFETY NOTE: Only a single "Spicy" toggle exists. No 18+ or adult
-            // gating is present in the app. All cards are reviewable in
-            // `CardDeckSeed` and are appropriate for general social settings.
+            // SAFETY NOTE: Only a single "Spicy" toggle exists. No 18+ gating is
+            // present in the app. All cards are reviewable in `CardDeckSeed`
+            // and are appropriate for general social settings.
             HStack(spacing: 8) {
                 contentToggle(
                     title: "Spicy",
