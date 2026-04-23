@@ -1,5 +1,5 @@
 -- ============================================================
--- 888Play — FINAL Star Economy Migration
+-- 8PartyPlay — FINAL Star Economy Migration
 -- Server-authoritative stars. Run once; safe to re-run.
 -- ============================================================
 

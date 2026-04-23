@@ -1,5 +1,5 @@
 -- ============================================================
--- 888Play — ADMIN PANEL schema & RPCs
+-- 8PartyPlay — ADMIN PANEL schema & RPCs
 -- Run AFTER supabase_final_production.sql and supabase_invite_system.sql
 -- Idempotent: safe to re-run.
 -- ============================================================

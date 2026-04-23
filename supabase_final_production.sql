@@ -1,5 +1,5 @@
 -- ============================================================
--- 888Play / PartyGames — FINAL Production Supabase SQL
+-- 8PartyPlay / PartyGames — FINAL Production Supabase SQL
 -- Run this ONCE in Supabase SQL Editor.
 -- Idempotent: safe to re-run. Drops old objects before recreating.
 -- Aligned 1:1 with ios/PartyGames Swift code.

@@ -1,5 +1,5 @@
 -- =============================================================================
--- 888Play Multiplayer SQL Query Pack
+-- 8PartyPlay Multiplayer SQL Query Pack
 -- Apply once in Supabase SQL Editor. Safe to re-run (CREATE OR REPLACE).
 -- Depends on: public.mp_events (see supabase_mp_telemetry.sql)
 -- =============================================================================

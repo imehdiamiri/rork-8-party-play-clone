@@ -1,5 +1,5 @@
 -- ============================================================
--- 888Play / PartyGames — Production-ready Supabase schema
+-- 8PartyPlay / PartyGames — Production-ready Supabase schema
 -- Aligned with current native iOS code in ios/PartyGames
 -- Safe to run in Supabase SQL editor
 -- ============================================================

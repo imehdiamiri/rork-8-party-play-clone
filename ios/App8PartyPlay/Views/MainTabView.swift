@@ -814,7 +814,7 @@ struct FriendsView: View {
                                 Spacer(minLength: 0)
                             }
                             .padding(.vertical, 4)
-                            ShareLink(item: "Let\u{2019}s play 888PartyPlay together! Download: https://www.888partyplay.com") {
+                            ShareLink(item: "Let\u{2019}s play 8PartyPlay together! Download: https://www.888partyplay.com") {
                                 HStack(spacing: 6) {
                                     Image(systemName: "square.and.arrow.up")
                                         .font(.caption2.weight(.semibold))

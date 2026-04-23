@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Multiplayer telemetry table (mp_events)
--- Lightweight append-only log for 888Play multiplayer observability.
+-- Lightweight append-only log for 8PartyPlay multiplayer observability.
 -- Apply once in Supabase SQL Editor.
 -- =============================================================================
 

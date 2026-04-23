@@ -1,5 +1,5 @@
 -- ============================================================
--- 888Play — Server-Validated Invite Reward System
+-- 8PartyPlay — Server-Validated Invite Reward System
 -- Run once; safe to re-run. All rewards granted server-side only.
 -- ============================================================
 
