@@ -415,7 +415,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "888 PartyPlay";
+				INFOPLIST_KEY_CFBundleDisplayName = "8partyplay";
 				INFOPLIST_KEY_CFBundleURLTypes = "({CFBundleTypeRole=Editor;CFBundleURLName=app.rork.cejfnhlng6nv3gg1g94ab.auth;CFBundleURLSchemes=(app.rork.cejfnhlng6nv3gg1g94ab);})";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "888 PartyPlay uses the microphone so each player can record their own Reverse Singing attempt.";
@@ -453,7 +453,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "888 PartyPlay";
+				INFOPLIST_KEY_CFBundleDisplayName = "8partyplay";
 				INFOPLIST_KEY_CFBundleURLTypes = "({CFBundleTypeRole=Editor;CFBundleURLName=app.rork.cejfnhlng6nv3gg1g94ab.auth;CFBundleURLSchemes=(app.rork.cejfnhlng6nv3gg1g94ab);})";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "888 PartyPlay uses the microphone so each player can record their own Reverse Singing attempt.";
