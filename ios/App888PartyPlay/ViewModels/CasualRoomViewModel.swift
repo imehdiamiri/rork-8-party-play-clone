@@ -311,8 +311,15 @@ final class CasualRoomViewModel {
             MultiplayerTelemetry.shared.log(event: "player_ready_submitted", source: "ui")
             Task {
                 await roomService.setPlayerReady(roomID: room.id, sessionToken: sessionToken, isReady: true)
-                await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
-                await roomService.broadcastRoomRefresh()
+                // Retry broadcasts so the host reliably sees our ready vote even
+                // if the realtime channel briefly drops a packet.
+                for attempt in 0..<3 {
+                    await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
+                    await roomService.broadcastRoomRefresh()
+                    if attempt < 2 {
+                        try? await Task.sleep(for: .milliseconds(400))
+                    }
+                }
             }
         }
         checkAllReadyAndStart()
@@ -721,8 +728,21 @@ final class CasualRoomViewModel {
     private func startLobbyWatchdog() {
         watchdogTask?.cancel()
         watchdogTask = Task { [weak self] in
+            // Fast watchdog while in lobby / ready-check so state transitions
+            // (new joins, ready votes, status=starting) surface quickly even if
+            // a realtime broadcast was missed. Slows down once the match is
+            // in progress to avoid hammering the DB.
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(10))
+                let interval: Duration = await MainActor.run {
+                    guard let status = self?.room?.status else { return Duration.seconds(3) }
+                    switch status {
+                    case .waiting, .full, .starting:
+                        return Duration.seconds(3)
+                    default:
+                        return Duration.seconds(8)
+                    }
+                }
+                try? await Task.sleep(for: interval)
                 guard !Task.isCancelled else { return }
                 await self?.refreshRoomFromDB()
             }

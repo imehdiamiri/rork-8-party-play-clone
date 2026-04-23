@@ -458,8 +458,17 @@ final class CasualRoomService {
     func startGame(room: CasualRoom, hostSessionToken: String) async throws {
         try await updateRoomStatus(roomID: room.id, status: .starting, hostSessionToken: hostSessionToken)
         let payload = CasualRoomStatePayload(from: room)
-        try? await channel?.broadcast(event: CasualBroadcastEvent.gameStarting.rawValue, message: payload)
-        await notifyRoomUpdate()
+        // Fire gameStarting repeatedly so guests reliably transition even if the
+        // realtime channel dropped a packet or is briefly unhealthy. The DB
+        // watchdog is a much slower fallback (several seconds).
+        for attempt in 0..<4 {
+            try? await channel?.broadcast(event: CasualBroadcastEvent.gameStarting.rawValue, message: payload)
+            try? await channel?.broadcast(event: CasualBroadcastEvent.roomStateFull.rawValue, message: payload)
+            await notifyRoomUpdate()
+            if attempt < 3 {
+                try? await Task.sleep(for: .milliseconds(350))
+            }
+        }
     }
 
     func broadcastGameStarting(_ room: CasualRoom) async {
@@ -481,8 +490,11 @@ final class CasualRoomService {
     func startHeartbeat(roomID: UUID, sessionToken: String) {
         heartbeatTask?.cancel()
         heartbeatTask = Task { [weak self] in
+            // Immediate first heartbeat so the backend knows we're alive without
+            // waiting a full tick — drastically improves perceived join speed.
+            await self?.sendHeartbeat(roomID: roomID, sessionToken: sessionToken)
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(30))
+                try? await Task.sleep(for: .seconds(10))
                 guard !Task.isCancelled else { return }
                 await self?.sendHeartbeat(roomID: roomID, sessionToken: sessionToken)
             }

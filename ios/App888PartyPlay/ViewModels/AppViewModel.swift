@@ -738,8 +738,21 @@ final class AppViewModel {
     private func startCasualRebroadcastPump() {
         casualRebroadcastPumpTask?.cancel()
         casualRebroadcastPumpTask = Task { [weak self] in
+            // Fire an immediate broadcast so spectators entering the game don't
+            // have to wait a full tick for their first authoritative state.
+            await MainActor.run {
+                guard let self else { return }
+                guard let session = self.activeSession,
+                      session.mode == .multiDevice || session.mode == .teamMode,
+                      self.isCurrentUserHost,
+                      let service = self.casualRoomService else { return }
+                let state = self.makeSessionStateRecord(from: session)
+                let origin = self.casualSessionOriginPlayerID ?? self.sessionPlayerID ?? UUID()
+                let payload = CasualGameStatePayload(sessionId: session.id.uuidString, originPlayerId: origin.uuidString, state: state)
+                Task { await service.broadcastGameState(payload) }
+            }
             while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(1500))
+                try? await Task.sleep(for: .milliseconds(1000))
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
                     guard let self else { return }
