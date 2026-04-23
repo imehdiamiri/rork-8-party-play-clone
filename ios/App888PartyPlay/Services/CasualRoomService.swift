@@ -36,6 +36,7 @@ final class CasualRoomService {
     var onReadyCheckCancelled: (() -> Void)?
     var onRoomStateBroadcast: ((CasualRoom) -> Void)?
     var onGameStateSync: ((CasualGameStatePayload) -> Void)?
+    var onSnapshotRequest: (() -> Void)?
 
     init(supabase: SupabaseService = .shared) {
         self.supabase = supabase
@@ -513,6 +514,7 @@ final class CasualRoomService {
         onReadyCheckCancelled = nil
         onRoomStateBroadcast = nil
         onGameStateSync = nil
+        onSnapshotRequest = nil
     }
 
     private func joinChannel(code: String) async throws {
@@ -539,6 +541,7 @@ final class CasualRoomService {
         let readyCancelStream = ch.broadcastStream(event: CasualBroadcastEvent.readyCheckCancelled.rawValue)
         let fullStateStream = ch.broadcastStream(event: CasualBroadcastEvent.roomStateFull.rawValue)
         let gameStateStream = ch.broadcastStream(event: CasualBroadcastEvent.gameStateSync.rawValue)
+        let snapshotReqStream = ch.broadcastStream(event: CasualBroadcastEvent.snapshotRequest.rawValue)
 
         try await ch.subscribeWithError()
 
@@ -604,6 +607,12 @@ final class CasualRoomService {
                         await self?.handleGameStateSync(message)
                     }
                 }
+                group.addTask {
+                    for await _ in snapshotReqStream {
+                        guard !Task.isCancelled else { return }
+                        await self?.onSnapshotRequest?()
+                    }
+                }
             }
         }
     }
@@ -644,6 +653,13 @@ final class CasualRoomService {
 
     func broadcastGameState(_ payload: CasualGameStatePayload) async {
         try? await channel?.broadcast(event: CasualBroadcastEvent.gameStateSync.rawValue, message: payload)
+    }
+
+    /// Broadcast a lightweight snapshot-request so the authoritative active player
+    /// / host immediately rebroadcasts its game state. Used by spectators on
+    /// resume so they don't wait for the next rebroadcast pump tick.
+    func requestGameStateSnapshot() async {
+        await broadcastEvent(.snapshotRequest, payload: ["ts": "\(Date().timeIntervalSince1970)"])
     }
 
     private func handleReadyCheckMessage(_ message: JSONObject, kind: ReadyKind) {

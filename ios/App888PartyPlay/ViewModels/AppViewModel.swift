@@ -227,11 +227,20 @@ final class AppViewModel {
                 startTimer()
             }
             backgroundTimersPaused = false
-            // Host: immediately rebroadcast so backgrounded peers re-sync on our resume.
-            // Non-host: the host's pump will rebroadcast within ~1.5s.
-            if isCurrentUserHost {
+            // Host / active player: immediately rebroadcast so backgrounded peers
+            // re-sync on our resume. Spectators: proactively request a fresh
+            // snapshot from the authoritative active player so they don't wait
+            // for the next rebroadcast pump tick.
+            if isCurrentUserHost || isCurrentPlayerTurn(in: session) {
                 rebroadcastCurrentCasualSessionState(attempts: 3)
+            } else if let service = casualRoomService {
+                Task { await service.requestGameStateSnapshot() }
             }
+            // Active-player validation on resume: a peer's authoritative rebroadcast
+            // (triggered by our snapshot request above, or by the host pump) will
+            // reconcile our turn index via the monotonic stateVersion guard in
+            // applyRemoteCasualGameState. If the backend has already advanced past
+            // us, the next inbound broadcast flips us back to spectator.
         } else if currentRoom != nil, let code = currentRoom?.code {
             observeRoom(code: code)
         }
@@ -663,6 +672,17 @@ final class AppViewModel {
         if let localPlayerID {
             sessionOverridePlayerID = localPlayerID
         }
+        // If a peer (resuming spectator) asks for a fresh snapshot, the
+        // authoritative active player / host immediately rebroadcasts so the
+        // spectator doesn't have to wait for the 1.5s rebroadcast pump.
+        service.onSnapshotRequest = { [weak self] in
+            guard let self else { return }
+            guard let session = self.activeSession,
+                  session.mode == .multiDevice || session.mode == .teamMode else { return }
+            if self.isCurrentUserHost || self.isCurrentPlayerTurn(in: session) {
+                self.rebroadcastCurrentCasualSessionState(attempts: 2)
+            }
+        }
     }
 
     func detachCasualRoomService() {
@@ -737,11 +757,25 @@ final class AppViewModel {
         guard let service = casualRoomService,
               let roomID = casualSessionRoomID,
               let token = casualSessionToken else { return true }
-        let resp = await service.claimTurnAdvance(roomID: roomID, sessionToken: token, expectedIndex: expectedIndex)
-        if resp.success == true { return true }
-        // Network/RPC failures must not permanently block gameplay. Only an
-        // explicit server rejection (stale_turn / not_active_player) aborts.
-        if resp.error == "rpc_failed" { return true }
+        // Strict backend-authoritative advance: retry transient RPC failures, but
+        // never let the client advance locally without a real server success.
+        // Only an authoritative `success == true` returns true. Explicit server
+        // rejections (stale_turn / not_active_player) and exhausted retries on
+        // rpc_failed both abort the advance, so two clients can never race past
+        // the backend.
+        for attempt in 0..<3 {
+            let resp = await service.claimTurnAdvance(roomID: roomID, sessionToken: token, expectedIndex: expectedIndex)
+            if resp.success == true { return true }
+            if resp.error == "rpc_failed" {
+                if attempt < 2 {
+                    try? await Task.sleep(for: .milliseconds(350 * (attempt + 1)))
+                    continue
+                }
+                syncErrorMessage = "Network error. Please try again."
+                return false
+            }
+            return false
+        }
         return false
     }
 

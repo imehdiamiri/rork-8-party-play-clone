@@ -316,6 +316,7 @@ nonisolated enum CasualBroadcastEvent: String, Sendable {
     case readyCheckCancelled = "ready_check_cancelled"
     case roomStateFull = "room_state_full"
     case gameStateSync = "game_state_sync"
+    case snapshotRequest = "snapshot_request"
 }
 
 nonisolated struct CasualPlayerEventPayload: Codable, Sendable {
