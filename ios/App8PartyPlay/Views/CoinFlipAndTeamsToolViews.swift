@@ -262,14 +262,14 @@ struct CoinFlipToolView: View {
                 if isHeads {
                     ZStack {
                         // Engraved dark shadow behind
-                        Text("888")
-                            .font(.system(size: size * 0.38, weight: .black, design: .rounded))
+                        Text("8")
+                            .font(.system(size: size * 0.55, weight: .black, design: .rounded))
                             .foregroundStyle(goldDeep.opacity(0.55))
                             .offset(x: size * 0.008, y: size * 0.012)
                             .blur(radius: 0.5)
                         // Main gold text with embossed look
-                        Text("888")
-                            .font(.system(size: size * 0.38, weight: .black, design: .rounded))
+                        Text("8")
+                            .font(.system(size: size * 0.55, weight: .black, design: .rounded))
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [

@@ -617,7 +617,7 @@ struct AICardGeneratorView: View {
                     }
                     .foregroundStyle(card.category.accentColor.opacity(0.7))
                     Spacer()
-                    Text("888 · AI")
+                    Text("8 · AI")
                         .font(.system(size: 10, weight: .heavy, design: .monospaced))
                         .foregroundStyle(.black.opacity(0.3))
                 }

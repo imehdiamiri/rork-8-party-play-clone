@@ -185,7 +185,7 @@ struct BeerBottleIcon: View {
                     .fill(Color.yellow.opacity(0.9))
                     .frame(width: w * 0.55, height: h * 0.16)
                     .overlay(
-                        Text("888")
+                        Text("8")
                             .font(.system(size: h * 0.11, weight: .heavy))
                             .foregroundStyle(Color(red: 0.30, green: 0.14, blue: 0.04))
                     )

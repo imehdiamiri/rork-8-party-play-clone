@@ -143,7 +143,7 @@ struct CardsRootView: View {
             }
             .overlay {
                 if glyph {
-                    Text("888")
+                    Text("8")
                         .font(.system(size: 16, weight: .black))
                         .foregroundStyle(.black.opacity(0.75))
                 }
