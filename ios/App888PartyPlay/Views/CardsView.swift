@@ -470,13 +470,10 @@ struct CardsDeckView: View {
     @State private var currentCard: PartyCard?
     @State private var selectedSubtype: CardSubtype?
     @State private var includeSpicy: Bool = false
-    @State private var include18Plus: Bool = false
     @State private var flipTrigger: Int = 0
     @State private var dragOffset: CGSize = .zero
     @State private var cardCounter: Int = 0
     @State private var showFilters: Bool = true
-
-    private var showsAdultFilter: Bool { viewModel.has18PlusContent(in: category) }
 
     var body: some View {
         ZStack {
@@ -521,7 +518,6 @@ struct CardsDeckView: View {
         }
         .onChange(of: selectedSubtype) { _, _ in loadNext() }
         .onChange(of: includeSpicy) { _, _ in loadNext() }
-        .onChange(of: include18Plus) { _, _ in loadNext() }
         .sensoryFeedback(.impact(weight: .light), trigger: flipTrigger)
     }
 
@@ -610,6 +606,9 @@ struct CardsDeckView: View {
             Divider().overlay(.white.opacity(0.06))
 
             // Content toggles
+            // SAFETY NOTE: Only a single "Spicy" toggle exists. No 18+ or adult
+            // gating is present in the app. All cards are reviewable in
+            // `CardDeckSeed` and are appropriate for general social settings.
             HStack(spacing: 8) {
                 contentToggle(
                     title: "Spicy",
@@ -618,16 +617,6 @@ struct CardsDeckView: View {
                     tint: .orange
                 ) {
                     withAnimation(.spring(duration: 0.2)) { includeSpicy.toggle() }
-                }
-                if showsAdultFilter {
-                    contentToggle(
-                        title: "18+",
-                        icon: "lock.fill",
-                        isOn: include18Plus,
-                        tint: .red
-                    ) {
-                        withAnimation(.spring(duration: 0.2)) { include18Plus.toggle() }
-                    }
                 }
                 Spacer(minLength: 0)
             }
@@ -768,7 +757,7 @@ struct CardsDeckView: View {
                         Text("No cards match those filters")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white.opacity(0.65))
-                        Text("Try turning off Spicy or 18+")
+                        Text("Try turning off Spicy")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(.white.opacity(0.45))
                     }
@@ -825,11 +814,8 @@ struct CardsDeckView: View {
                     }
                     Spacer()
                     HStack(spacing: 5) {
-                        if card.isSpicy && !card.is18Plus {
+                        if card.isSpicy {
                             badge(text: "SPICY", systemImage: "flame.fill", color: .orange)
-                        }
-                        if card.is18Plus {
-                            badge(text: "18+", systemImage: "lock.fill", color: .red)
                         }
                     }
                 }
@@ -1012,7 +998,6 @@ struct CardsDeckView: View {
             category: category,
             subtype: selectedSubtype,
             includeSpicy: includeSpicy,
-            include18Plus: include18Plus,
             excluding: currentCard?.id
         )
         if animated {

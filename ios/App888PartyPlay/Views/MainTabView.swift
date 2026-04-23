@@ -1376,8 +1376,6 @@ struct ProfileView: View {
     @State private var showLoginConfirm: Bool = false
     @State private var showDeleteConfirm: Bool = false
     @State private var purchaseSelection: PurchaseSelection?
-    @State private var showAdminPanel: Bool = false
-    @State private var isAdminUser: Bool = false
 
     private var contextGame: GameType? { appModel.profileContextGame }
 
@@ -1425,10 +1423,6 @@ struct ProfileView: View {
         .dismissKeyboardOnTap()
         .onAppear {
             username = appModel.username
-            Task { await checkAdminStatus() }
-        }
-        .sheet(isPresented: $showAdminPanel) {
-            AdminQuickView()
         }
         .sheet(item: $purchaseSelection) { selection in
             PurchaseDetailView(selection: selection, store: store)
@@ -1865,34 +1859,7 @@ struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
 
-                if isAdminUser {
-                    Divider().padding(.vertical, 2)
-                    Button {
-                        showAdminPanel = true
-                    } label: {
-                        HStack {
-                            Label("Admin Panel", systemImage: "lock.shield.fill")
-                                .font(.subheadline)
-                                .foregroundStyle(.orange)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
             }
-        }
-    }
-
-    private func checkAdminStatus() async {
-        do {
-            let result: Bool = try await SupabaseService.shared.client
-                .rpc("current_user_is_admin").execute().value
-            isAdminUser = result
-        } catch {
-            isAdminUser = false
         }
     }
 }

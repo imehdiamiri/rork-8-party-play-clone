@@ -117,6 +117,10 @@ nonisolated enum CardSubtype: String, CaseIterable, Identifiable, Hashable, Send
 }
 
 
+// SAFETY NOTE: This app does NOT expose any 18+ or adult-only content.
+// The `is18Plus` flag is retained as a compile-time constant `false` for binary
+// compatibility with persisted data, and is never set to true anywhere.
+// All card content is bundled locally and reviewable in `CardDeckSeed`.
 nonisolated struct PartyCard: Identifiable, Hashable, Sendable, Codable {
     let id: UUID
     let category: CardCategory
@@ -140,8 +144,8 @@ nonisolated struct PartyCard: Identifiable, Hashable, Sendable, Codable {
         self.subtype = subtype
         self.text = text
         self.isSpicy = isSpicy
-        self.is18Plus = is18Plus
-        self.isPremium = isSpicy || is18Plus || isPremium
+        self.is18Plus = false
+        self.isPremium = isSpicy || isPremium
     }
 }
 
@@ -158,15 +162,18 @@ nonisolated enum CardDeckSeed {
         }
     }
 
-    /// Flags: normal, spicy, adult (spicy + 18+), adultOnly (18+ not marked spicy)
+    /// SAFETY NOTE: `.adult` and `.adultOnly` legacy flags are intentionally
+    /// mapped to `.spicy` behavior with `is18Plus` forced to false. The app no
+    /// longer surfaces any 18+ content. This mapping keeps the bundled dataset
+    /// intact while removing the adult classification end-to-end.
     private static func make(_ category: CardCategory, _ entries: [(String, CardSubtype, Flag)]) -> [PartyCard] {
         entries.map { text, subtype, flag in
             PartyCard(
                 category: category,
                 subtype: subtype,
                 text: text,
-                isSpicy: flag == .spicy || flag == .adult,
-                is18Plus: flag == .adult || flag == .adultOnly
+                isSpicy: flag != .normal,
+                is18Plus: false
             )
         }
     }

@@ -8,7 +8,6 @@ nonisolated enum AppConstants {
     }
 
     enum URLs {
-        static let adminDashboard: URL = URL(string: "https://www.888partyplay.com/admin")!
         static let privacyPolicy: URL = URL(string: "https://www.888partyplay.com/privacy.html")!
         static let termsOfService: URL = URL(string: "https://www.888partyplay.com/terms.html")!
         static let marketingSite: URL = URL(string: "https://www.888partyplay.com")!

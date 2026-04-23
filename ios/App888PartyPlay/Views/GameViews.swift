@@ -120,7 +120,7 @@ struct GameDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     lockedBullet(icon: "checkmark.circle.fill", text: "Unlock all premium games")
                     lockedBullet(icon: "sparkles", text: "AI cards cost just 1 \u{2605} instead of 5")
-                    lockedBullet(icon: "flame.fill", text: "Access spicy / 18+ content")
+                    lockedBullet(icon: "star.fill", text: "Bonus Stars every billing period")
                 }
 
                 Button {

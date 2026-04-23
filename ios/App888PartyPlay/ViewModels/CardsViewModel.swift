@@ -2,12 +2,14 @@ import Foundation
 import SwiftUI
 import Observation
 
+// SAFETY NOTE:
+// - This view model only reads the locally bundled `CardDeckSeed`.
+// - No remote fetching, no feature flags, no server-side content switching.
+// - The 18+/adult content path has been removed end-to-end. The `include18Plus`
+//   parameters below are kept for source compatibility but are ignored.
 @Observable
 @MainActor
 final class CardsViewModel {
-    var show18Plus: Bool {
-        didSet { UserDefaults.standard.set(show18Plus, forKey: "cards.show18Plus") }
-    }
     var savedCardIDs: Set<UUID> {
         didSet { persistSaved() }
     }
@@ -15,7 +17,6 @@ final class CardsViewModel {
     private var recentIDsByCategory: [CardCategory: [UUID]] = [:]
 
     init() {
-        self.show18Plus = UserDefaults.standard.bool(forKey: "cards.show18Plus")
         if let data = UserDefaults.standard.data(forKey: "cards.saved"),
            let ids = try? JSONDecoder().decode([UUID].self, from: data) {
             self.savedCardIDs = Set(ids)
@@ -34,37 +35,24 @@ final class CardsViewModel {
         CardDeckSeed.cards(for: category)
     }
 
-    func count(for category: CardCategory, include18Plus: Bool) -> Int {
-        CardDeckSeed.cards(for: category).filter { include18Plus || !$0.is18Plus }.count
-    }
-
-    /// Whether the category has any 18+ content at all.
-    func has18PlusContent(in category: CardCategory) -> Bool {
-        CardDeckSeed.cards(for: category).contains { $0.is18Plus }
+    func count(for category: CardCategory, include18Plus: Bool = true) -> Int {
+        CardDeckSeed.cards(for: category).count
     }
 
     func randomCard(
         category: CardCategory,
         subtype: CardSubtype?,
         includeSpicy: Bool,
-        include18Plus: Bool,
+        include18Plus: Bool = false,
         excluding currentID: UUID?
     ) -> PartyCard? {
-        let matchesContentLayer: (PartyCard) -> Bool = { card in
-            switch (includeSpicy, include18Plus) {
-            case (false, false):
-                return !card.isSpicy && !card.is18Plus
-            case (true, false):
-                return card.isSpicy && !card.is18Plus
-            case (false, true):
-                return card.is18Plus
-            case (true, true):
-                return card.isSpicy || card.is18Plus
-            }
-        }
         let allowed = CardDeckSeed.cards(for: category).filter { card in
             if let subtype, card.subtype != subtype { return false }
-            return matchesContentLayer(card)
+            if includeSpicy {
+                return true
+            } else {
+                return !card.isSpicy
+            }
         }
         return pickAvoidingRecent(from: allowed, category: category, excluding: currentID)
     }

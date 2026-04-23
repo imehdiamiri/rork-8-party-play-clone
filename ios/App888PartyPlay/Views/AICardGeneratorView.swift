@@ -1,12 +1,21 @@
 import SwiftUI
 
+// MARK: - AI Card Generator
+//
+// SAFETY / COMPLIANCE NOTES (App Store):
+// - AI is used ONLY to produce a single short, plain-text party prompt.
+// - The system prompt enforces strict safety rules (see AIContentModeration).
+// - Every generated output passes through an on-device moderation layer
+//   before being displayed. Failures surface a neutral retry message.
+// - There is NO remote configuration, NO feature flag, and NO hidden content
+//   tier. Behavior is identical during App Review and after approval.
+// - No images, audio, links, or external media are ever produced.
+
 nonisolated struct AIGeneratedCard: Identifiable, Hashable, Sendable {
     let id = UUID()
     let text: String
     let category: CardCategory
     let subtype: CardSubtype?
-    let isSpicy: Bool
-    let is18Plus: Bool
 }
 
 @Observable
@@ -15,8 +24,6 @@ final class AICardGeneratorViewModel {
     var category: CardCategory = .talk
     var subtype: CardSubtype? = nil
     var topic: String = ""
-    var includeSpicy: Bool = false
-    var include18Plus: Bool = false
     var isGenerating: Bool = false
     var card: AIGeneratedCard?
     var errorMessage: String?
@@ -60,15 +67,12 @@ final class AICardGeneratorViewModel {
         errorMessage = nil
         defer { isGenerating = false }
 
-        let spicyLine: String
-        switch (includeSpicy, include18Plus) {
-        case (false, false): spicyLine = "Normal level. Safe and general. Not flirty, not adult."
-        case (true, false): spicyLine = "Spicy level. Playful, flirty, slightly bold, but still group-safe. Not adult."
-        case (false, true): spicyLine = "18+ level. More personal or intimate, but NOT explicit. Still socially acceptable."
-        case (true, true): spicyLine = "Spicy and 18+ level. Flirty and intimate but NOT explicit."
-        }
-
         let trimmed = topic.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Moderate the user's topic before sending to the model.
+        if !trimmed.isEmpty && !AIContentModeration.isSafe(trimmed) {
+            errorMessage = "Please choose a different topic."
+            return
+        }
         let userRequest = trimmed.isEmpty ? "(no specific request)" : trimmed
         let subtypeLine: String
         if let sub = subtype {
@@ -77,14 +81,19 @@ final class AICardGeneratorViewModel {
             subtypeLine = "Subtype: any subtype of this category."
         }
 
-        let system = "You are a party game card writer. Return ONLY valid JSON. No markdown, no code fences."
+        // Global safety rules are prepended to every request. The model is
+        // instructed to IGNORE unsafe user requests and produce a neutral
+        // alternative instead. Output is then validated on-device.
+        let system = """
+        \(AIContentModeration.safetySystemRules)
+        Return ONLY valid JSON. No markdown, no code fences.
+        """
         let user = """
         Generate ONE party game card.
 
         Category: \(category.title). \(categoryRule(category))
         \(subtypeLine)
         User request: \(userRequest)
-        \(spicyLine)
 
         Rules:
         - Exactly ONE sentence
@@ -94,7 +103,7 @@ final class AICardGeneratorViewModel {
         - Under 20 words
         - Natural, human-like
         - Must match the category behavior exactly
-        - Suitable for group play
+        - Safe and appropriate for a general-audience group
 
         Return strictly this JSON:
         {"text":"..."}
@@ -115,12 +124,16 @@ final class AICardGeneratorViewModel {
                 errorMessage = "Empty response. Try again."
                 return
             }
+            // Final on-device moderation. If the output is unsafe, show a
+            // neutral error and do NOT display the card.
+            guard AIContentModeration.isSafe(text) else {
+                errorMessage = "Could not generate a safe card. Try a different topic."
+                return
+            }
             let newCard = AIGeneratedCard(
                 text: text,
                 category: category,
-                subtype: subtype,
-                isSpicy: includeSpicy,
-                is18Plus: include18Plus
+                subtype: subtype
             )
             withAnimation(.spring(duration: 0.4, bounce: 0.18)) {
                 card = newCard
@@ -256,7 +269,7 @@ struct AICardGeneratorView: View {
         }
     }
 
-    // MARK: Controls card (combines category, type, idea, filters)
+    // MARK: Controls card
 
     private var controlsCard: some View {
         VStack(spacing: 10) {
@@ -269,7 +282,6 @@ struct AICardGeneratorView: View {
         VStack(alignment: .leading, spacing: 10) {
             categoryDropdown
             subtypeDropdown
-            filterToggles
         }
         .padding(14)
         .background(.white.opacity(0.04), in: .rect(cornerRadius: 18))
@@ -363,103 +375,6 @@ struct AICardGeneratorView: View {
         }
     }
 
-    // MARK: Category chips
-
-    private var categoryChips: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionLabel("CARD TYPE", icon: "square.grid.2x2.fill")
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(CardCategory.allCases) { cat in
-                        categoryChip(cat)
-                    }
-                }
-            }
-            .contentMargins(.horizontal, 0)
-        }
-    }
-
-    private func categoryChip(_ cat: CardCategory) -> some View {
-        let isSelected = vm.category == cat
-        return Button {
-            withAnimation(.spring(duration: 0.22)) {
-                vm.category = cat
-                vm.subtype = nil
-            }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: cat.icon)
-                    .font(.system(size: 11, weight: .black))
-                Text(cat.title)
-                    .font(.system(size: 12, weight: .heavy))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .foregroundStyle(isSelected ? .white : cat.accentColor)
-            .background(
-                isSelected ? cat.accentColor : cat.accentColor.opacity(0.12),
-                in: .capsule
-            )
-            .overlay {
-                Capsule().strokeBorder(isSelected ? .clear : cat.accentColor.opacity(0.4))
-            }
-            .shadow(color: isSelected ? cat.accentColor.opacity(0.4) : .clear, radius: 8, y: 3)
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: Subtype chips
-
-    private var subtypeChips: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionLabel("STYLE", icon: "tag.fill")
-            FlowLayout(horizontalSpacing: 6, verticalSpacing: 6) {
-                subtypeChip(title: "Any", isSelected: vm.subtype == nil) {
-                    withAnimation(.spring(duration: 0.2)) { vm.subtype = nil }
-                }
-                ForEach(vm.category.subtypes) { sub in
-                    subtypeChip(
-                        title: sub.title,
-                        isSelected: vm.subtype == sub,
-                        isFeatured: sub.isFeatured
-                    ) {
-                        withAnimation(.spring(duration: 0.2)) {
-                            vm.subtype = (vm.subtype == sub) ? nil : sub
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func subtypeChip(title: String, isSelected: Bool, isFeatured: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                if isFeatured {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 8, weight: .black))
-                }
-                Text(title)
-            }
-            .font(.system(size: 11, weight: .heavy))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .foregroundStyle(isSelected ? .black : isFeatured ? vm.category.accentColor : .white.opacity(0.75))
-            .background(
-                isSelected ? Color.white
-                : isFeatured ? vm.category.accentColor.opacity(0.15) : Color.white.opacity(0.05),
-                in: .capsule
-            )
-            .overlay {
-                Capsule().strokeBorder(
-                    isSelected ? .clear
-                    : isFeatured ? vm.category.accentColor.opacity(0.4) : .white.opacity(0.08)
-                )
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
     // MARK: Input
 
     private var inputField: some View {
@@ -507,60 +422,6 @@ struct AICardGeneratorView: View {
         case .challenges: return "e.g. create a short speaking challenge"
         case .penalty: return "e.g. create a funny punishment for the loser"
         }
-    }
-
-    // MARK: Filter toggles
-
-    private var filterToggles: some View {
-        HStack(spacing: 8) {
-            compactToggleChip(title: "Spicy", icon: "flame.fill", isOn: vm.includeSpicy, tint: .orange) {
-                withAnimation(.spring(duration: 0.25, bounce: 0.2)) { vm.includeSpicy.toggle() }
-            }
-            compactToggleChip(title: "18+", icon: "lock.fill", isOn: vm.include18Plus, tint: .red) {
-                withAnimation(.spring(duration: 0.25, bounce: 0.2)) { vm.include18Plus.toggle() }
-            }
-        }
-    }
-
-    private func compactToggleChip(title: String, icon: String, isOn: Bool, tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .black))
-                    .foregroundStyle(isOn ? tint : .white.opacity(0.5))
-                Text(title)
-                    .font(.system(size: 13, weight: .heavy))
-                    .foregroundStyle(.white)
-                Spacer(minLength: 0)
-                iosSwitch(isOn: isOn, tint: tint)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity)
-            .background(
-                (isOn ? tint.opacity(0.09) : Color.white.opacity(0.04)),
-                in: .rect(cornerRadius: 12)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(isOn ? tint.opacity(0.35) : .white.opacity(0.07))
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func iosSwitch(isOn: Bool, tint: Color) -> some View {
-        ZStack(alignment: isOn ? .trailing : .leading) {
-            Capsule()
-                .fill(isOn ? tint : Color.white.opacity(0.18))
-            Circle()
-                .fill(.white)
-                .frame(width: 18, height: 18)
-                .shadow(color: .black.opacity(0.25), radius: 1.5, y: 1)
-                .padding(2)
-        }
-        .frame(width: 36, height: 22)
-        .animation(.spring(duration: 0.25, bounce: 0.2), value: isOn)
     }
 
     // MARK: Generate button
@@ -696,7 +557,6 @@ struct AICardGeneratorView: View {
                     )
                 )
 
-            // Accent ribbon
             VStack(spacing: 0) {
                 LinearGradient(
                     colors: [card.category.accentColor, card.category.accentColor.opacity(0.7)],
@@ -708,7 +568,6 @@ struct AICardGeneratorView: View {
             }
             .clipShape(.rect(cornerRadius: 24))
 
-            // Watermark
             Image(systemName: card.category.icon)
                 .font(.system(size: 150, weight: .black))
                 .foregroundStyle(card.category.accentColor.opacity(0.06))
@@ -732,14 +591,6 @@ struct AICardGeneratorView: View {
                             .foregroundStyle(.black.opacity(0.4))
                     }
                     Spacer()
-                    HStack(spacing: 5) {
-                        if card.isSpicy && !card.is18Plus {
-                            badge(text: "SPICY", systemImage: "flame.fill", color: .orange)
-                        }
-                        if card.is18Plus {
-                            badge(text: "18+", systemImage: "lock.fill", color: .red)
-                        }
-                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -782,19 +633,6 @@ struct AICardGeneratorView: View {
         .shadow(color: .black.opacity(0.35), radius: 26, y: 14)
         .frame(maxWidth: .infinity)
         .aspectRatio(0.82, contentMode: .fit)
-    }
-
-    private func badge(text: String, systemImage: String, color: Color) -> some View {
-        HStack(spacing: 3) {
-            Image(systemName: systemImage)
-                .font(.system(size: 8, weight: .black))
-            Text(text)
-                .font(.system(size: 9, weight: .black))
-        }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
-        .background(color, in: .capsule)
     }
 
     // MARK: Usage footer

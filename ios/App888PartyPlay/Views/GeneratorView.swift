@@ -98,10 +98,21 @@ final class GeneratorViewModel {
         errorMessage = nil
         defer { isGenerating = false }
 
-        let system = "You are a creative party game designer. Return ONLY valid JSON. No markdown, no code fences."
+        // SAFETY: Moderate user-provided context before calling the model.
+        let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedPrompt.isEmpty && !AIContentModeration.isSafe(trimmedPrompt) {
+            errorMessage = "Please choose a different context."
+            return
+        }
+
+        let system = """
+        \(AIContentModeration.safetySystemRules)
+        You are a creative party game designer.
+        Return ONLY valid JSON. No markdown, no code fences.
+        """
         let userPrompt = """
-        Generate 3 fresh, original party game ideas for \(playerCount) players. Style: \(vibe.title) — \(vibe.promptDescriptor). Every idea MUST clearly be a \(vibe.title.lowercased()) style game and reflect that activity type in its title, description and steps.
-        \(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : "Extra context: \(prompt)")
+        Generate 3 fresh, original, safe party game ideas for \(playerCount) players. Style: \(vibe.title) — \(vibe.promptDescriptor). Every idea MUST clearly be a \(vibe.title.lowercased()) style game and reflect that activity type in its title, description and steps. All ideas must be appropriate for a general-audience social setting.
+        \(trimmedPrompt.isEmpty ? "" : "Extra context: \(trimmedPrompt)")
 
         Return strictly this JSON shape:
         {"ideas":[{"title":"...","description":"one sentence hook","steps":["step1","step2","step3","step4"],"tags":["tag1","tag2"]}]}
@@ -116,8 +127,18 @@ final class GeneratorViewModel {
                 return
             }
             let decoded = try JSONDecoder().decode(IdeasResponse.self, from: data)
-            let mapped = decoded.ideas.map {
-                GeneratedPartyIdea(title: $0.title, description: $0.description, steps: $0.steps, tags: $0.tags)
+            // Final on-device moderation: filter out any idea whose fields
+            // contain unsafe content. If nothing remains, surface a neutral error.
+            let mapped: [GeneratedPartyIdea] = decoded.ideas.compactMap { idea in
+                let fields = [idea.title, idea.description] + idea.steps + idea.tags
+                for field in fields where !AIContentModeration.isSafe(field) {
+                    return nil
+                }
+                return GeneratedPartyIdea(title: idea.title, description: idea.description, steps: idea.steps, tags: idea.tags)
+            }
+            if mapped.isEmpty {
+                errorMessage = "Could not generate safe ideas. Try a different prompt."
+                return
             }
             withAnimation(.spring(duration: 0.35)) {
                 ideas = mapped + ideas
