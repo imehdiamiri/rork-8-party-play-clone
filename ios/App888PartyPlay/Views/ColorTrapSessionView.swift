@@ -229,6 +229,7 @@ struct ColorTrapSessionView: View {
 
     private func multiResultsView(state: ColorTrapGameState) -> some View {
         let sorted = state.playerResults.sorted { $0.score > $1.score }
+        let currentSession = appModel.activeSession ?? session
         return ScrollView {
             VStack(spacing: 20) {
                 VStack(spacing: 8) {
@@ -245,7 +246,9 @@ struct ColorTrapSessionView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, 28)
+
+                MultiplayerResultActionsBar(appModel: appModel, session: currentSession, onExit: onExit)
+                    .padding(.bottom, 28)
             }
         }
     }

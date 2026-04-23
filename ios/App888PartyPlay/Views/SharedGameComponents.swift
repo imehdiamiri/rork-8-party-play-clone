@@ -235,3 +235,106 @@ struct GameRoundBadge: View {
             .foregroundStyle(.secondary)
     }
 }
+
+struct MultiplayerResultActionsBar: View {
+    let appModel: AppViewModel
+    let session: GameSession
+    let onExit: () -> Void
+
+    private var isHost: Bool {
+        guard let pid = appModel.sessionPlayerID else { return false }
+        return session.players.first(where: { $0.id == pid })?.isHost ?? false
+    }
+
+    private var hasVoted: Bool { appModel.hasVotedRematch }
+
+    private var voters: [PlayerProfile] {
+        session.players.filter { session.rematchPlayerIDs.contains($0.id) }
+    }
+
+    private var nonHostVoters: [PlayerProfile] {
+        voters.filter { !$0.isHost }
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Button {
+                    if isHost {
+                        appModel.startRematch()
+                    } else if !hasVoted {
+                        appModel.voteForRematch()
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.clockwise")
+                        Text(isHost ? "Rematch" : (hasVoted ? "Waiting for host…" : "Rematch"))
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(colors: [.green, .mint], startPoint: .leading, endPoint: .trailing),
+                        in: .rect(cornerRadius: 14)
+                    )
+                    .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+                .disabled(!isHost && hasVoted)
+
+                Button {
+                    onExit()
+                    Task { await appModel.exitActiveSession() }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                        Text("Exit").fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(.red.opacity(0.18), in: .rect(cornerRadius: 14))
+                    .foregroundStyle(.red)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14).strokeBorder(.red.opacity(0.35))
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+
+            if isHost, !nonHostVoters.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Ready for rematch", systemImage: "checkmark.seal.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.green)
+                    ForEach(nonHostVoters) { p in
+                        HStack(spacing: 10) {
+                            Image(systemName: "person.fill")
+                                .foregroundStyle(.green)
+                            Text(p.username)
+                                .font(.subheadline.weight(.medium))
+                            Spacer()
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.green.opacity(0.08), in: .rect(cornerRadius: 10))
+                    }
+                }
+                .padding(12)
+                .background(.white.opacity(0.04), in: .rect(cornerRadius: 14))
+            } else if !isHost, hasVoted {
+                HStack(spacing: 8) {
+                    ProgressView().scaleEffect(0.8)
+                    Text("Waiting for host to start rematch…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(.white.opacity(0.04), in: .rect(cornerRadius: 12))
+            }
+        }
+        .padding(.horizontal, 16)
+    }
+}

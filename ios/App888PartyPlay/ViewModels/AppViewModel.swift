@@ -681,6 +681,43 @@ final class AppViewModel {
         }
     }
 
+    // MARK: - Rematch
+
+    func voteForRematch() {
+        guard let session = activeSession,
+              let pid = sessionPlayerID,
+              session.phase == .finished else { return }
+        if session.rematchPlayerIDs.contains(pid) { return }
+        let newIDs = session.rematchPlayerIDs + [pid]
+        updateSession(copying: session, rematchPlayerIDs: newIDs)
+        rebroadcastCurrentCasualSessionState(attempts: 2)
+    }
+
+    func startRematch() {
+        guard let session = activeSession else { return }
+        guard isCurrentUserHost else { return }
+        guard session.mode == .multiDevice || session.mode == .teamMode else { return }
+        let freshPlayers = session.players.map { p in
+            PlayerProfile(id: p.id, username: p.username, isHost: p.isHost, isReady: p.isReady, isOnline: p.isOnline, score: 0)
+        }
+        let localID = sessionOverridePlayerID ?? casualSessionOriginPlayerID
+        startCasualMultiplayerSession(
+            game: session.game,
+            mode: session.mode,
+            players: freshPlayers,
+            roomCode: session.roomCode ?? "",
+            localPlayerID: localID,
+            sessionID: session.id,
+            syncToPeers: true
+        )
+        rebroadcastCurrentCasualSessionState()
+    }
+
+    var hasVotedRematch: Bool {
+        guard let session = activeSession, let pid = sessionPlayerID else { return false }
+        return session.rematchPlayerIDs.contains(pid)
+    }
+
     func exitActiveSession() async {
         if let service = casualRoomService,
            let roomID = casualSessionRoomID,
@@ -1847,7 +1884,7 @@ final class AppViewModel {
         return generatedRounds
     }
 
-    private func updateSession(copying session: GameSession, phase: MatchPhase? = nil, secondsRemaining: Int? = nil, latestAwardedPoints: Int? = nil, latestFeedback: String? = nil, players: [PlayerProfile]? = nil, results: [GameResultRow]? = nil, fakeAnswerState: FakeAnswerRoundState? = nil, passGuessState: PassGuessRoundState? = nil, guessTheSecondsState: GuessTheSecondsGameState? = nil, memoryGridState: MemoryGridGameState? = nil, memoryPathState: MemoryPathGameState? = nil, tapInOrderState: TapInOrderGameState? = nil, colorTrapState: ColorTrapGameState? = nil) {
+    private func updateSession(copying session: GameSession, phase: MatchPhase? = nil, secondsRemaining: Int? = nil, latestAwardedPoints: Int? = nil, latestFeedback: String? = nil, players: [PlayerProfile]? = nil, results: [GameResultRow]? = nil, fakeAnswerState: FakeAnswerRoundState? = nil, passGuessState: PassGuessRoundState? = nil, guessTheSecondsState: GuessTheSecondsGameState? = nil, memoryGridState: MemoryGridGameState? = nil, memoryPathState: MemoryPathGameState? = nil, tapInOrderState: TapInOrderGameState? = nil, colorTrapState: ColorTrapGameState? = nil, rematchPlayerIDs: [UUID]? = nil) {
         updateSession(
             GameSession(
                 id: session.id,
@@ -1869,7 +1906,8 @@ final class AppViewModel {
                 memoryGridState: memoryGridState ?? session.memoryGridState,
                 memoryPathState: memoryPathState ?? session.memoryPathState,
                 tapInOrderState: tapInOrderState ?? session.tapInOrderState,
-                colorTrapState: colorTrapState ?? session.colorTrapState
+                colorTrapState: colorTrapState ?? session.colorTrapState,
+                rematchPlayerIDs: rematchPlayerIDs ?? session.rematchPlayerIDs
             )
         )
     }
@@ -2170,7 +2208,8 @@ final class AppViewModel {
                     playerResults: ct.playerResults.map { SessionStateCTResultRecord(id: $0.id, playerID: $0.playerID, playerName: $0.playerName, hits: $0.hits, fails: $0.fails, survivalTime: $0.survivalTime, eliminated: $0.eliminated) },
                     isFinished: ct.isFinished
                 )
-            }
+            },
+            rematchPlayerIDs: session.rematchPlayerIDs.map { $0.uuidString }
         )
     }
 
@@ -2298,7 +2337,8 @@ final class AppViewModel {
                     playerResults: ct.playerResults.map { CTPlayerResult(id: $0.id, playerID: $0.playerID, playerName: $0.playerName, hits: $0.hits, fails: $0.fails, survivalTime: $0.survivalTime, eliminated: $0.eliminated) },
                     isFinished: ct.isFinished
                 )
-            }
+            },
+            rematchPlayerIDs: state.rematchPlayerIDs.compactMap { UUID(uuidString: $0) }
         )
     }
 

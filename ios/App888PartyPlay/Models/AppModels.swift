@@ -1194,6 +1194,7 @@ nonisolated struct GameSession: Identifiable, Hashable, Sendable {
     let memoryPathState: MemoryPathGameState?
     let tapInOrderState: TapInOrderGameState?
     let colorTrapState: ColorTrapGameState?
+    let rematchPlayerIDs: [UUID]
 
     init(
         id: UUID = UUID(),
@@ -1215,7 +1216,8 @@ nonisolated struct GameSession: Identifiable, Hashable, Sendable {
         memoryGridState: MemoryGridGameState? = nil,
         memoryPathState: MemoryPathGameState? = nil,
         tapInOrderState: TapInOrderGameState? = nil,
-        colorTrapState: ColorTrapGameState? = nil
+        colorTrapState: ColorTrapGameState? = nil,
+        rematchPlayerIDs: [UUID] = []
     ) {
         self.id = id
         self.game = game
@@ -1237,6 +1239,7 @@ nonisolated struct GameSession: Identifiable, Hashable, Sendable {
         self.memoryPathState = memoryPathState
         self.tapInOrderState = tapInOrderState
         self.colorTrapState = colorTrapState
+        self.rematchPlayerIDs = rematchPlayerIDs
     }
 }
 

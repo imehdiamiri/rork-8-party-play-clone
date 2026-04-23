@@ -824,6 +824,51 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
     let memoryPathState: SessionStateMemoryPathRecord?
     let tapInOrderState: SessionStateTapInOrderRecord?
     let colorTrapState: SessionStateColorTrapRecord?
+    let rematchPlayerIDs: [String]
+
+    init(
+        gameKey: String,
+        mode: String,
+        roomCode: String?,
+        players: [SessionStatePlayerRecord],
+        rounds: [SessionStateRoundRecord],
+        currentRoundIndex: Int,
+        phase: String,
+        secondsRemaining: Int,
+        latestAwardedPoints: Int,
+        latestFeedback: String,
+        results: [SessionStateResultRecord],
+        liveState: SessionStateLiveStateRecord,
+        fakeAnswerState: SessionStateFakeAnswerRoundStateRecord? = nil,
+        passGuessState: SessionStatePassGuessRoundStateRecord? = nil,
+        guessTheSecondsState: SessionStateGuessTheSecondsRecord? = nil,
+        memoryGridState: SessionStateMemoryGridRecord? = nil,
+        memoryPathState: SessionStateMemoryPathRecord? = nil,
+        tapInOrderState: SessionStateTapInOrderRecord? = nil,
+        colorTrapState: SessionStateColorTrapRecord? = nil,
+        rematchPlayerIDs: [String] = []
+    ) {
+        self.gameKey = gameKey
+        self.mode = mode
+        self.roomCode = roomCode
+        self.players = players
+        self.rounds = rounds
+        self.currentRoundIndex = currentRoundIndex
+        self.phase = phase
+        self.secondsRemaining = secondsRemaining
+        self.latestAwardedPoints = latestAwardedPoints
+        self.latestFeedback = latestFeedback
+        self.results = results
+        self.liveState = liveState
+        self.fakeAnswerState = fakeAnswerState
+        self.passGuessState = passGuessState
+        self.guessTheSecondsState = guessTheSecondsState
+        self.memoryGridState = memoryGridState
+        self.memoryPathState = memoryPathState
+        self.tapInOrderState = tapInOrderState
+        self.colorTrapState = colorTrapState
+        self.rematchPlayerIDs = rematchPlayerIDs
+    }
 
     enum CodingKeys: String, CodingKey {
         case gameKey
@@ -845,6 +890,31 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
         case memoryPathState = "memory_path_state"
         case tapInOrderState = "tap_in_order_state"
         case colorTrapState = "color_trap_state"
+        case rematchPlayerIDs = "rematch_player_ids"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        gameKey = try c.decode(String.self, forKey: .gameKey)
+        mode = try c.decode(String.self, forKey: .mode)
+        roomCode = try c.decodeIfPresent(String.self, forKey: .roomCode)
+        players = try c.decode([SessionStatePlayerRecord].self, forKey: .players)
+        rounds = try c.decode([SessionStateRoundRecord].self, forKey: .rounds)
+        currentRoundIndex = try c.decode(Int.self, forKey: .currentRoundIndex)
+        phase = try c.decode(String.self, forKey: .phase)
+        secondsRemaining = try c.decode(Int.self, forKey: .secondsRemaining)
+        latestAwardedPoints = try c.decode(Int.self, forKey: .latestAwardedPoints)
+        latestFeedback = try c.decode(String.self, forKey: .latestFeedback)
+        results = try c.decode([SessionStateResultRecord].self, forKey: .results)
+        liveState = try c.decode(SessionStateLiveStateRecord.self, forKey: .liveState)
+        fakeAnswerState = try c.decodeIfPresent(SessionStateFakeAnswerRoundStateRecord.self, forKey: .fakeAnswerState)
+        passGuessState = try c.decodeIfPresent(SessionStatePassGuessRoundStateRecord.self, forKey: .passGuessState)
+        guessTheSecondsState = try c.decodeIfPresent(SessionStateGuessTheSecondsRecord.self, forKey: .guessTheSecondsState)
+        memoryGridState = try c.decodeIfPresent(SessionStateMemoryGridRecord.self, forKey: .memoryGridState)
+        memoryPathState = try c.decodeIfPresent(SessionStateMemoryPathRecord.self, forKey: .memoryPathState)
+        tapInOrderState = try c.decodeIfPresent(SessionStateTapInOrderRecord.self, forKey: .tapInOrderState)
+        colorTrapState = try c.decodeIfPresent(SessionStateColorTrapRecord.self, forKey: .colorTrapState)
+        rematchPlayerIDs = (try? c.decodeIfPresent([String].self, forKey: .rematchPlayerIDs)) ?? []
     }
 }
 

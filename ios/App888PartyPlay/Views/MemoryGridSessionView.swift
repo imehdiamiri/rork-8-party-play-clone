@@ -9,6 +9,8 @@ struct MemoryGridSessionView: View {
     @State private var currentPlayerIndex: Int = 0
     @State private var playerTimes: [UUID: Double] = [:]
     @State private var gamePhase: MemoryGridPhase = .ready
+    @State private var spectatorBroadcastTimer: Timer?
+    @Environment(\.scenePhase) private var scenePhase
 
     private var isMultiDevice: Bool {
         session.mode != .singleDevice && session.memoryGridState != nil
@@ -58,11 +60,27 @@ struct MemoryGridSessionView: View {
                         elapsedSeconds: viewModel.elapsedSeconds
                     )
                 }
+                startSpectatorBroadcastTimer()
             }
         }
         .onDisappear {
             viewModel.onStateChange = nil
             viewModel.cleanup()
+            spectatorBroadcastTimer?.invalidate()
+            spectatorBroadcastTimer = nil
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active && isMultiDevice {
+                appModel.rebroadcastCurrentCasualSessionState(attempts: 2)
+                if appModel.isCurrentPlayerTurn(in: appModel.activeSession ?? session) {
+                    appModel.broadcastMemoryGridSpectatorState(
+                        tiles: viewModel.tiles,
+                        matchedPairs: viewModel.matchedPairs,
+                        moveCount: viewModel.moveCount,
+                        elapsedSeconds: viewModel.elapsedSeconds
+                    )
+                }
+            }
         }
     }
 
@@ -331,6 +349,7 @@ struct MemoryGridSessionView: View {
 
     private func multiResultsView(mg: MemoryGridGameState, players: [PlayerProfile]) -> some View {
         let sorted = mg.playerResults.sorted { $0.elapsedSeconds < $1.elapsedSeconds }
+        let currentSession = appModel.activeSession ?? session
         return ScrollView {
             VStack(spacing: 20) {
                 VStack(spacing: 8) {
@@ -372,7 +391,28 @@ struct MemoryGridSessionView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, 28)
+
+                MultiplayerResultActionsBar(appModel: appModel, session: currentSession, onExit: onExit)
+                    .padding(.bottom, 28)
+            }
+        }
+    }
+
+    private func startSpectatorBroadcastTimer() {
+        spectatorBroadcastTimer?.invalidate()
+        spectatorBroadcastTimer = Timer.scheduledTimer(withTimeInterval: 1.8, repeats: true) { _ in
+            Task { @MainActor in
+                guard isMultiDevice,
+                      let current = appModel.activeSession,
+                      appModel.isCurrentPlayerTurn(in: current),
+                      !viewModel.tiles.isEmpty,
+                      gamePhase == .playing else { return }
+                appModel.broadcastMemoryGridSpectatorState(
+                    tiles: viewModel.tiles,
+                    matchedPairs: viewModel.matchedPairs,
+                    moveCount: viewModel.moveCount,
+                    elapsedSeconds: viewModel.elapsedSeconds
+                )
             }
         }
     }

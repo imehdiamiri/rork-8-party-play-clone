@@ -252,6 +252,7 @@ struct TapInOrderSessionView: View {
             if lhs.missTaps != rhs.missTaps { return lhs.missTaps < rhs.missTaps }
             return lhs.elapsedSeconds < rhs.elapsedSeconds
         }
+        let currentSession = appModel.activeSession ?? session
         return ScrollView {
             VStack(spacing: 20) {
                 VStack(spacing: 8) {
@@ -268,7 +269,9 @@ struct TapInOrderSessionView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, 28)
+
+                MultiplayerResultActionsBar(appModel: appModel, session: currentSession, onExit: onExit)
+                    .padding(.bottom, 28)
             }
         }
     }

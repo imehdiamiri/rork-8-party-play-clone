@@ -49,6 +49,7 @@ struct GuessTheSecondsSessionView: View {
                 scoreTableCard
                 if viewModel.isFinished {
                     finalResultsCard
+                    MultiplayerResultActionsBar(appModel: appModel, session: appModel.activeSession ?? session, onExit: onExit)
                 }
             }
             .padding(.horizontal, 16)
