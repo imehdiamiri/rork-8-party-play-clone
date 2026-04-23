@@ -372,75 +372,71 @@ struct HostLobbyView: View {
     }
 
     private var roomHeaderCard: some View {
-        SurfaceCard {
-            VStack(alignment: .leading, spacing: 14) {
-                Color(.secondarySystemBackground)
-                    .frame(height: 100)
-                    .overlay {
-                        LinearGradient(
-                            colors: [.green.opacity(0.86), .teal.opacity(0.4)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                        .allowsHitTesting(false)
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(room?.gameType.name ?? "Party Game")
-                                    .font(.title3.weight(.bold))
-                                    .foregroundStyle(.white)
-                                Text("Party Room")
-                                    .font(.footnote.weight(.medium))
-                                    .foregroundStyle(.white.opacity(0.8))
-                            }
-                            Spacer()
-                            if room?.isFull == true {
-                                StatusPillView(title: "Full", systemImage: "person.crop.circle.badge.xmark", tint: .white)
-                            }
-                        }
-                        .padding(16)
-                        .allowsHitTesting(false)
-                    }
-                    .clipShape(.rect(cornerRadius: 16))
+        VStack(spacing: 14) {
+            Text(room?.gameType.name ?? "Party Game")
+                .font(.system(size: 34, weight: .black, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(colors: [.white, .green.opacity(0.8)], startPoint: .top, endPoint: .bottom)
+                )
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.6)
+                .lineLimit(2)
+                .padding(.top, 4)
 
-                VStack(spacing: 6) {
-                    Text("Room Code")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(room?.code ?? "---")
-                        .font(.system(size: 36, weight: .black, design: .rounded))
-                        .foregroundStyle(.green)
-                        .kerning(6)
-                        .monospacedDigit()
-                    HStack(spacing: 8) {
-                        Button {
-                            UIPasteboard.general.string = room?.code ?? ""
-                        } label: {
-                            Label("Copy", systemImage: "doc.on.doc")
-                                .font(.caption.weight(.semibold))
+            VStack(spacing: 10) {
+                Text("ROOM CODE")
+                    .font(.caption2.weight(.heavy))
+                    .kerning(2)
+                    .foregroundStyle(.green.opacity(0.9))
+
+                Text(room?.code ?? "------")
+                    .font(.system(size: 44, weight: .black, design: .rounded))
+                    .foregroundStyle(
+                        LinearGradient(colors: [.green, .teal], startPoint: .leading, endPoint: .trailing)
+                    )
+                    .kerning(8)
+                    .monospacedDigit()
+                    .shadow(color: .green.opacity(0.4), radius: 12)
+
+                HStack(spacing: 8) {
+                    Button {
+                        UIPasteboard.general.string = room?.code ?? ""
+                    } label: {
+                        Label("Copy", systemImage: "doc.on.doc.fill")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(.white.opacity(0.12), in: .capsule)
+                    }
+                    .buttonStyle(.plain)
+
+                    if let code = room?.code, let gameName = room?.gameType.name {
+                        ShareLink(item: "\(code)\n\nJoin me on 888PartyPlay to play together!\n(Game: \(gameName))") {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                                .font(.caption.weight(.bold))
                                 .foregroundStyle(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(.white.opacity(0.12), in: .capsule)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(.blue, in: .capsule)
                         }
                         .buttonStyle(.plain)
-
-                        if let code = room?.code, let gameName = room?.gameType.name {
-                            ShareLink(item: "\(code)\n\nJoin me on 888PartyPlay to play together!\n(Game: \(gameName))") {
-                                Label("Invite", systemImage: "square.and.arrow.up")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 7)
-                                    .background(.blue, in: .capsule)
-                            }
-                            .buttonStyle(.plain)
-                        }
                     }
-                    .padding(.top, 2)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(14)
-                .background(.white.opacity(0.04), in: .rect(cornerRadius: 14))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 22)
+            .padding(.horizontal, 16)
+            .background(
+                LinearGradient(
+                    colors: [.green.opacity(0.18), .teal.opacity(0.08)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ),
+                in: .rect(cornerRadius: 22)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 22)
+                    .strokeBorder(.green.opacity(0.3), lineWidth: 1)
             }
         }
     }
@@ -626,17 +622,23 @@ fileprivate func startGameSession(appModel: AppViewModel, casualVM: CasualRoomVi
     guard appModel.activeSession?.roomCode != roomCode else { return }
 
     if isHost {
-        // Host isn't inside a fullScreenCover — safe to set activeSession immediately.
-        appModel.startCasualMultiplayerSession(
-            game: gameType,
-            mode: playMode,
-            players: players,
-            roomCode: roomCode,
-            localPlayerID: localID,
-            sessionID: roomID,
-            syncToPeers: true
-        )
-        appModel.rebroadcastCurrentCasualSessionState()
+        // ReadyCheckSheet is dismissing right now — fullScreenCover cannot layer
+        // over a dismissing sheet. Delay session open slightly so the sheet is
+        // fully dismissed first, otherwise the game never opens for the host.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard appModel.activeSession?.roomCode != roomCode else { return }
+            appModel.startCasualMultiplayerSession(
+                game: gameType,
+                mode: playMode,
+                players: players,
+                roomCode: roomCode,
+                localPlayerID: localID,
+                sessionID: roomID,
+                syncToPeers: true
+            )
+            appModel.rebroadcastCurrentCasualSessionState()
+        }
     } else {
         // Guest is inside a QuickJoinSheet fullScreenCover. SwiftUI cannot layer
         // MainTabView's .fullScreenCover(item: activeSession) over it, so we
@@ -748,42 +750,61 @@ struct GuestLobbyView: View {
     }
 
     private var guestHeroCard: some View {
-        SurfaceCard {
-            VStack(spacing: 16) {
-                Text(room?.gameType.name ?? "Party Game")
-                    .font(.system(size: 30, weight: .heavy, design: .rounded))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.white, .blue.opacity(0.85)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
+        VStack(spacing: 18) {
+            Text(room?.gameType.name ?? "Party Game")
+                .font(.system(size: 38, weight: .black, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(colors: [.white, .blue.opacity(0.85)], startPoint: .top, endPoint: .bottom)
+                )
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.55)
+                .lineLimit(2)
+                .padding(.top, 8)
+
+            ZStack {
+                Circle()
+                    .stroke(
+                        LinearGradient(colors: [.blue.opacity(0.7), .purple.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        lineWidth: 3
                     )
-                    .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(2)
-
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(colors: [.blue.opacity(0.7), .purple.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 70, height: 70)
-                    Image(systemName: "hourglass")
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .symbolEffect(.pulse, options: .repeating)
-                }
-
-                VStack(spacing: 6) {
-                    Text("Waiting for the host")
-                        .font(.headline.weight(.bold))
-                    Text("The match will start automatically.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+                    .frame(width: 96, height: 96)
+                    .blur(radius: 1)
+                Circle()
+                    .fill(LinearGradient(colors: [.blue.opacity(0.7), .purple.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 78, height: 78)
+                    .shadow(color: .blue.opacity(0.5), radius: 18)
+                Image(systemName: "gamecontroller.fill")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundStyle(.white)
+                    .symbolEffect(.pulse, options: .repeating)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .padding(.vertical, 4)
+
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small).tint(.blue)
+                    Text("Waiting for the host…")
+                        .font(.headline.weight(.bold))
+                }
+                Text("The match will start as soon as the host is ready.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
+            .padding(.bottom, 12)
+        }
+        .frame(maxWidth: .infinity)
+        .background(
+            LinearGradient(
+                colors: [.blue.opacity(0.18), .purple.opacity(0.08)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            ),
+            in: .rect(cornerRadius: 22)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 22)
+                .strokeBorder(.blue.opacity(0.3), lineWidth: 1)
         }
     }
 
