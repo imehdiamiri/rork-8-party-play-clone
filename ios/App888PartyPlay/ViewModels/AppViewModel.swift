@@ -2102,6 +2102,12 @@ final class AppViewModel {
             )
         )
 
+        if session.mode == .multiDevice || session.mode == .teamMode {
+            sessionOnlinePlayerIDs = Set(session.players.map(\.id))
+            sessionExitedPlayerIDs = []
+            startCasualRematchPollIfNeeded()
+        }
+
         if let activeSessionRecordID {
             let resultRecords = session.players.sorted(by: { $0.score > $1.score }).enumerated().map { index, player in
                 let rank = index + 1

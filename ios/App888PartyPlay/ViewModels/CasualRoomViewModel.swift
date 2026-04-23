@@ -338,7 +338,8 @@ final class CasualRoomViewModel {
     }
 
     private func checkAllReadyAndStart() {
-        guard isHost, readyCheckActive, let room, room.status == .waiting else { return }
+        guard isHost, readyCheckActive, let room else { return }
+        guard room.status == .waiting || room.status == .full else { return }
         let connectedIDs = Set(room.players.filter { $0.isConnected }.map { $0.id })
         guard !connectedIDs.isEmpty else { return }
         guard connectedIDs.isSubset(of: readyConfirmedPlayerIDs) else { return }
@@ -551,6 +552,10 @@ final class CasualRoomViewModel {
             self.playMode = room.playMode
             self.teamState = room.teamState ?? .default
             self.fakeAnswerSettings = room.settings
+            self.gameStarted = room.status == .starting || room.status == .inProgress
+            if room.status == .starting || room.status == .inProgress {
+                self.readyCheckActive = false
+            }
         }
 
         roomService.onPlayerKicked = { [weak self] playerID in
@@ -684,7 +689,7 @@ final class CasualRoomViewModel {
                 teamState: resolvedTeamState
             )
             readyConfirmedPlayerIDs = confirmedIDs
-            if status == .waiting {
+            if status == .waiting || status == .full {
                 readyCheckActive = !confirmedIDs.isEmpty
             } else {
                 readyCheckActive = false
