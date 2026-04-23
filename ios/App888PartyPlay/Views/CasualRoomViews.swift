@@ -138,32 +138,7 @@ struct CasualJoinRoomView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     SurfaceCard {
                         VStack(alignment: .leading, spacing: 14) {
-                            HStack(alignment: .top, spacing: 14) {
-                                Image(systemName: "number.square.fill")
-                                    .font(.system(size: 32, weight: .semibold))
-                                    .foregroundStyle(.blue)
-                                    .frame(width: 58, height: 58)
-                                    .background(.blue.opacity(0.14), in: .rect(cornerRadius: 18))
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Join with Code")
-                                        .font(.title3.weight(.bold))
-                                    Text("Type the room code and your name. If the host starts right away, the game opens automatically on your phone.")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer(minLength: 0)
-                            }
-
-                            HStack(spacing: 8) {
-                                StatusPillView(title: "Fast Join", systemImage: "bolt.fill", tint: .blue)
-                                StatusPillView(title: "Live Sync", systemImage: "dot.radiowaves.up.forward", tint: .green)
-                            }
-                        }
-                    }
-
-                    SurfaceCard {
-                        VStack(alignment: .leading, spacing: 16) {
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 10) {
                                 Text("Room Code")
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.secondary)
@@ -171,18 +146,27 @@ struct CasualJoinRoomView: View {
                                     .keyboardType(.numberPad)
                                     .textContentType(.oneTimeCode)
                                     .focused($focusedField, equals: .code)
-                                    .font(.system(size: 28, weight: .heavy, design: .monospaced))
+                                    .font(.system(size: 40, weight: .black, design: .monospaced))
+                                    .kerning(8)
                                     .multilineTextAlignment(.center)
-                                    .padding(.vertical, 16)
-                                    .background(.white.opacity(0.05), in: .rect(cornerRadius: 16))
+                                    .padding(.vertical, 22)
+                                    .frame(maxWidth: .infinity)
+                                    .background(.blue.opacity(0.12), in: .rect(cornerRadius: 18))
                                     .overlay {
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .strokeBorder(.white.opacity(0.08))
+                                        RoundedRectangle(cornerRadius: 18)
+                                            .strokeBorder(.blue.opacity(0.35), lineWidth: 1.5)
                                     }
-                                Text("Ask your friend for the 6-digit code.")
+                                Text("Enter the 6-digit room code.")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .center)
                             }
+                        }
+                    }
+
+                    SurfaceCard {
+                        VStack(alignment: .leading, spacing: 16) {
+                            EmptyView()
 
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Your Name")
@@ -263,11 +247,7 @@ struct CasualJoinRoomView: View {
             }
         }
         .task {
-            if casualVM.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                focusedField = .code
-            } else {
-                focusedField = .name
-            }
+            focusedField = .code
         }
         .alert("Removed from Room", isPresented: $casualVM.wasKicked) {
             Button("OK") { dismiss() }
@@ -422,42 +402,45 @@ struct HostLobbyView: View {
                     }
                     .clipShape(.rect(cornerRadius: 16))
 
-                HStack(spacing: 10) {
+                VStack(spacing: 6) {
                     Text("Room Code")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                    Spacer()
                     Text(room?.code ?? "---")
-                        .font(.system(size: 28, weight: .black, design: .monospaced))
+                        .font(.system(size: 36, weight: .black, design: .rounded))
                         .foregroundStyle(.green)
-                        .kerning(4)
-                    Button {
-                        UIPasteboard.general.string = room?.code ?? ""
-                    } label: {
-                        Image(systemName: "doc.on.doc")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(12)
-                .background(.white.opacity(0.04), in: .rect(cornerRadius: 14))
-
-                if let code = room?.code, let gameName = room?.gameType.name {
-                    ShareLink(item: "\(code)\n\nJoin me on 888PartyPlay to play together!\n(Game: \(gameName))") {
-                        HStack(spacing: 8) {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.subheadline.weight(.semibold))
-                            Text("Invite Friends")
-                                .font(.subheadline.weight(.bold))
+                        .kerning(6)
+                        .monospacedDigit()
+                    HStack(spacing: 8) {
+                        Button {
+                            UIPasteboard.general.string = room?.code ?? ""
+                        } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(.white.opacity(0.12), in: .capsule)
                         }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(.blue, in: .rect(cornerRadius: 14))
+                        .buttonStyle(.plain)
+
+                        if let code = room?.code, let gameName = room?.gameType.name {
+                            ShareLink(item: "\(code)\n\nJoin me on 888PartyPlay to play together!\n(Game: \(gameName))") {
+                                Label("Invite", systemImage: "square.and.arrow.up")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 7)
+                                    .background(.blue, in: .capsule)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
+                    .padding(.top, 2)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(14)
+                .background(.white.opacity(0.04), in: .rect(cornerRadius: 14))
             }
         }
     }
@@ -574,11 +557,30 @@ struct HostLobbyView: View {
     }
 
     private var hostActionsSection: some View {
-        VStack(spacing: 8) {
-            Button("Start Match") {
+        VStack(spacing: 10) {
+            Button {
                 casualVM.startGame()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "play.fill")
+                        .font(.title3.weight(.bold))
+                    Text("Start Match")
+                        .font(.title3.weight(.heavy))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 18)
+                .background(
+                    LinearGradient(
+                        colors: casualVM.canStart ? [.green, .teal] : [.gray.opacity(0.4), .gray.opacity(0.3)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    in: .rect(cornerRadius: 18)
+                )
+                .shadow(color: casualVM.canStart ? .green.opacity(0.35) : .clear, radius: 14, y: 6)
             }
-            .buttonStyle(PrimaryActionButtonStyle())
+            .buttonStyle(.plain)
             .disabled(!casualVM.canStart)
 
             if let room, room.players.count < room.minPlayers {
@@ -744,25 +746,41 @@ struct GuestLobbyView: View {
 
     private var guestHeroCard: some View {
         SurfaceCard {
-            VStack(spacing: 14) {
+            VStack(spacing: 16) {
+                Text(room?.gameType.name ?? "Party Game")
+                    .font(.system(size: 30, weight: .heavy, design: .rounded))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.white, .blue.opacity(0.85)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(2)
+
                 ZStack {
                     Circle()
                         .fill(LinearGradient(colors: [.blue.opacity(0.7), .purple.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 78, height: 78)
+                        .frame(width: 70, height: 70)
                     Image(systemName: "hourglass")
-                        .font(.system(size: 34, weight: .semibold))
+                        .font(.system(size: 30, weight: .semibold))
                         .foregroundStyle(.white)
                         .symbolEffect(.pulse, options: .repeating)
                 }
-                Text("Waiting for the host")
-                    .font(.title3.weight(.bold))
-                Text("You joined **\(room?.host?.displayName ?? "the host")**’s room.\nThe game will start automatically when the host is ready.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+
+                VStack(spacing: 6) {
+                    Text("Waiting for the host")
+                        .font(.headline.weight(.bold))
+                    Text("The match will start automatically.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(.vertical, 10)
         }
     }
 
