@@ -14,9 +14,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "105FC5792E9EAD3100EA8BCF"
-               BuildableName = "App888PartyPlay.app"
-               BlueprintName = "App888PartyPlay"
-               ReferencedContainer = "container:App888PartyPlay.xcodeproj">
+               BuildableName = "App8PartyPlay.app"
+               BlueprintName = "App8PartyPlay"
+               ReferencedContainer = "container:App8PartyPlay.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -36,9 +36,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "105FC5792E9EAD3100EA8BCF"
-            BuildableName = "App888PartyPlay.app"
-            BlueprintName = "App888PartyPlay"
-            ReferencedContainer = "container:App888PartyPlay.xcodeproj">
+            BuildableName = "App8PartyPlay.app"
+            BlueprintName = "App8PartyPlay"
+            ReferencedContainer = "container:App8PartyPlay.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -53,9 +53,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "105FC5792E9EAD3100EA8BCF"
-            BuildableName = "App888PartyPlay.app"
-            BlueprintName = "App888PartyPlay"
-            ReferencedContainer = "container:App888PartyPlay.xcodeproj">
+            BuildableName = "App8PartyPlay.app"
+            BlueprintName = "App8PartyPlay"
+            ReferencedContainer = "container:App8PartyPlay.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

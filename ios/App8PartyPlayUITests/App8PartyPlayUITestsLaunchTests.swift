@@ -1,13 +1,13 @@
 //
-//  App888PartyPlayUITestsLaunchTests.swift
-//  App888PartyPlayUITests
+//  App8PartyPlayUITestsLaunchTests.swift
+//  App8PartyPlayUITests
 //
 //  Created by Rork on April 5, 2026.
 //
 
 import XCTest
 
-final class App888PartyPlayUITestsLaunchTests: XCTestCase {
+final class App8PartyPlayUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

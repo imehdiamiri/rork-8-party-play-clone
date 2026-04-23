@@ -17,37 +17,37 @@
 			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
-			remoteInfo = App888PartyPlay;
+			remoteInfo = App8PartyPlay;
 		};
 		105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
-			remoteInfo = App888PartyPlay;
+			remoteInfo = App8PartyPlay;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		105FC57A2E9EAD3100EA8BCF /* App888PartyPlay.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App888PartyPlay.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		105FC5892E9EAD3200EA8BCF /* App888PartyPlayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = App888PartyPlayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		105FC5932E9EAD3200EA8BCF /* App888PartyPlayUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = App888PartyPlayUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC57A2E9EAD3100EA8BCF /* App8PartyPlay.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App8PartyPlay.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC5892E9EAD3200EA8BCF /* App8PartyPlayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = App8PartyPlayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC5932E9EAD3200EA8BCF /* App8PartyPlayUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = App8PartyPlayUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		105FC57C2E9EAD3100EA8BCF /* App888PartyPlay */ = {
+		105FC57C2E9EAD3100EA8BCF /* App8PartyPlay */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = App888PartyPlay;
+			path = App8PartyPlay;
 			sourceTree = "<group>";
 		};
-		105FC58C2E9EAD3200EA8BCF /* App888PartyPlayTests */ = {
+		105FC58C2E9EAD3200EA8BCF /* App8PartyPlayTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = App888PartyPlayTests;
+			path = App8PartyPlayTests;
 			sourceTree = "<group>";
 		};
-		105FC5962E9EAD3200EA8BCF /* App888PartyPlayUITests */ = {
+		105FC5962E9EAD3200EA8BCF /* App8PartyPlayUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = App888PartyPlayUITests;
+			path = App8PartyPlayUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -82,9 +82,9 @@
 		105FC5712E9EAD3100EA8BCF = {
 			isa = PBXGroup;
 			children = (
-				105FC57C2E9EAD3100EA8BCF /* App888PartyPlay */,
-				105FC58C2E9EAD3200EA8BCF /* App888PartyPlayTests */,
-				105FC5962E9EAD3200EA8BCF /* App888PartyPlayUITests */,
+				105FC57C2E9EAD3100EA8BCF /* App8PartyPlay */,
+				105FC58C2E9EAD3200EA8BCF /* App8PartyPlayTests */,
+				105FC5962E9EAD3200EA8BCF /* App8PartyPlayUITests */,
 				105FC57B2E9EAD3100EA8BCF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -92,9 +92,9 @@
 		105FC57B2E9EAD3100EA8BCF /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				105FC57A2E9EAD3100EA8BCF /* App888PartyPlay.app */,
-				105FC5892E9EAD3200EA8BCF /* App888PartyPlayTests.xctest */,
-				105FC5932E9EAD3200EA8BCF /* App888PartyPlayUITests.xctest */,
+				105FC57A2E9EAD3100EA8BCF /* App8PartyPlay.app */,
+				105FC5892E9EAD3200EA8BCF /* App8PartyPlayTests.xctest */,
+				105FC5932E9EAD3200EA8BCF /* App8PartyPlayUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,9 +102,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		105FC5792E9EAD3100EA8BCF /* App888PartyPlay */ = {
+		105FC5792E9EAD3100EA8BCF /* App8PartyPlay */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App888PartyPlay" */;
+			buildConfigurationList = 105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App8PartyPlay" */;
 			buildPhases = (
 				105FC5762E9EAD3100EA8BCF /* Sources */,
 				105FC5772E9EAD3100EA8BCF /* Frameworks */,
@@ -115,20 +115,20 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				105FC57C2E9EAD3100EA8BCF /* App888PartyPlay */,
+				105FC57C2E9EAD3100EA8BCF /* App8PartyPlay */,
 			);
-			name = App888PartyPlay;
+			name = App8PartyPlay;
 			packageProductDependencies = (
 				XX1C9FF110ABBCE8BF456CXX /* Supabase */,
 				XXDCC169DE7B2F3C1C8B10XX /* RevenueCat */,
 			);
-			productName = App888PartyPlay;
-			productReference = 105FC57A2E9EAD3100EA8BCF /* App888PartyPlay.app */;
+			productName = App8PartyPlay;
+			productReference = 105FC57A2E9EAD3100EA8BCF /* App8PartyPlay.app */;
 			productType = "com.apple.product-type.application";
 		};
-		105FC5882E9EAD3200EA8BCF /* App888PartyPlayTests */ = {
+		105FC5882E9EAD3200EA8BCF /* App8PartyPlayTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App888PartyPlayTests" */;
+			buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App8PartyPlayTests" */;
 			buildPhases = (
 				105FC5852E9EAD3200EA8BCF /* Sources */,
 				105FC5862E9EAD3200EA8BCF /* Frameworks */,
@@ -140,18 +140,18 @@
 				105FC58B2E9EAD3200EA8BCF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				105FC58C2E9EAD3200EA8BCF /* App888PartyPlayTests */,
+				105FC58C2E9EAD3200EA8BCF /* App8PartyPlayTests */,
 			);
-			name = App888PartyPlayTests;
+			name = App8PartyPlayTests;
 			packageProductDependencies = (
 			);
-			productName = App888PartyPlayTests;
-			productReference = 105FC5892E9EAD3200EA8BCF /* App888PartyPlayTests.xctest */;
+			productName = App8PartyPlayTests;
+			productReference = 105FC5892E9EAD3200EA8BCF /* App8PartyPlayTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		105FC5922E9EAD3200EA8BCF /* App888PartyPlayUITests */ = {
+		105FC5922E9EAD3200EA8BCF /* App8PartyPlayUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App888PartyPlayUITests" */;
+			buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App8PartyPlayUITests" */;
 			buildPhases = (
 				105FC58F2E9EAD3200EA8BCF /* Sources */,
 				105FC5902E9EAD3200EA8BCF /* Frameworks */,
@@ -163,13 +163,13 @@
 				105FC5952E9EAD3200EA8BCF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				105FC5962E9EAD3200EA8BCF /* App888PartyPlayUITests */,
+				105FC5962E9EAD3200EA8BCF /* App8PartyPlayUITests */,
 			);
-			name = App888PartyPlayUITests;
+			name = App8PartyPlayUITests;
 			packageProductDependencies = (
 			);
-			productName = App888PartyPlayUITests;
-			productReference = 105FC5932E9EAD3200EA8BCF /* App888PartyPlayUITests.xctest */;
+			productName = App8PartyPlayUITests;
+			productReference = 105FC5932E9EAD3200EA8BCF /* App8PartyPlayUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -195,7 +195,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "App888PartyPlay" */;
+			buildConfigurationList = 105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "App8PartyPlay" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -214,9 +214,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				105FC5792E9EAD3100EA8BCF /* App888PartyPlay */,
-				105FC5882E9EAD3200EA8BCF /* App888PartyPlayTests */,
-				105FC5922E9EAD3200EA8BCF /* App888PartyPlayUITests */,
+				105FC5792E9EAD3100EA8BCF /* App8PartyPlay */,
+				105FC5882E9EAD3200EA8BCF /* App8PartyPlayTests */,
+				105FC5922E9EAD3200EA8BCF /* App8PartyPlayUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -272,12 +272,12 @@
 /* Begin PBXTargetDependency section */
 		105FC58B2E9EAD3200EA8BCF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 105FC5792E9EAD3100EA8BCF /* App888PartyPlay */;
+			target = 105FC5792E9EAD3100EA8BCF /* App8PartyPlay */;
 			targetProxy = 105FC58A2E9EAD3200EA8BCF /* PBXContainerItemProxy */;
 		};
 		105FC5952E9EAD3200EA8BCF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 105FC5792E9EAD3100EA8BCF /* App888PartyPlay */;
+			target = 105FC5792E9EAD3100EA8BCF /* App8PartyPlay */;
 			targetProxy = 105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -409,13 +409,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = App888PartyPlay/App888PartyPlay.entitlements;
+				CODE_SIGN_ENTITLEMENTS = App8PartyPlay/App8PartyPlay.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "8PartyPlay";
+				INFOPLIST_KEY_CFBundleDisplayName = 8PartyPlay;
 				INFOPLIST_KEY_CFBundleURLTypes = "({CFBundleTypeRole=Editor;CFBundleURLName=app.rork.cejfnhlng6nv3gg1g94ab.auth;CFBundleURLSchemes=(app.rork.cejfnhlng6nv3gg1g94ab);})";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "8PartyPlay uses the microphone so each player can record their own Reverse Singing attempt.";
@@ -447,13 +447,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = App888PartyPlay/App888PartyPlay.entitlements;
+				CODE_SIGN_ENTITLEMENTS = App8PartyPlay/App8PartyPlay.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "8PartyPlay";
+				INFOPLIST_KEY_CFBundleDisplayName = 8PartyPlay;
 				INFOPLIST_KEY_CFBundleURLTypes = "({CFBundleTypeRole=Editor;CFBundleURLName=app.rork.cejfnhlng6nv3gg1g94ab.auth;CFBundleURLSchemes=(app.rork.cejfnhlng6nv3gg1g94ab);})";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "8PartyPlay uses the microphone so each player can record their own Reverse Singing attempt.";
@@ -498,7 +498,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App888PartyPlay.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/App888PartyPlay";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App8PartyPlay.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/App8PartyPlay";
 			};
 			name = Debug;
 		};
@@ -520,7 +520,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App888PartyPlay.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/App888PartyPlay";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App8PartyPlay.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/App8PartyPlay";
 			};
 			name = Release;
 		};
@@ -540,7 +540,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = App888PartyPlay;
+				TEST_TARGET_NAME = App8PartyPlay;
 			};
 			name = Debug;
 		};
@@ -560,14 +560,14 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = App888PartyPlay;
+				TEST_TARGET_NAME = App8PartyPlay;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "App888PartyPlay" */ = {
+		105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "App8PartyPlay" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC59B2E9EAD3200EA8BCF /* Debug */,
@@ -576,7 +576,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App888PartyPlay" */ = {
+		105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App8PartyPlay" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC59E2E9EAD3200EA8BCF /* Debug */,
@@ -585,7 +585,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App888PartyPlayTests" */ = {
+		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App8PartyPlayTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A12E9EAD3200EA8BCF /* Debug */,
@@ -594,7 +594,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App888PartyPlayUITests" */ = {
+		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "App8PartyPlayUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A42E9EAD3200EA8BCF /* Debug */,

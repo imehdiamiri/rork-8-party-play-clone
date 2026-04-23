@@ -1,13 +1,13 @@
 //
-//  App888PartyPlayUITests.swift
-//  App888PartyPlayUITests
+//  App8PartyPlayUITests.swift
+//  App8PartyPlayUITests
 //
 //  Created by Rork on April 5, 2026.
 //
 
 import XCTest
 
-final class App888PartyPlayUITests: XCTestCase {
+final class App8PartyPlayUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

@@ -4,7 +4,7 @@ import UIKit
 import UserNotifications
 
 @main
-struct App888PartyPlayApp: App {
+struct App8PartyPlayApp: App {
     @State private var appModel = AppViewModel()
     @State private var store = StoreViewModel()
     @Environment(\.scenePhase) private var scenePhase

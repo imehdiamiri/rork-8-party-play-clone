@@ -2,7 +2,7 @@
   "$schema": "https://rork.com/schema/rork.json",
   "apps": [
     {
-      "name": "App 888 Party Play",
+      "name": "8 Party Play",
       "path": "ios",
       "framework": "swift"
     }
