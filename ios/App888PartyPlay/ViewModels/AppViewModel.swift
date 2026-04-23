@@ -231,9 +231,12 @@ final class AppViewModel {
             // re-sync on our resume. Spectators: proactively request a fresh
             // snapshot from the authoritative active player so they don't wait
             // for the next rebroadcast pump tick.
+            MultiplayerTelemetry.shared.log(event: "app_resumed_in_match", source: "resume")
+            MultiplayerTelemetry.shared.log(event: "reconnect_during_match", source: "resume")
             if isCurrentUserHost || isCurrentPlayerTurn(in: session) {
                 rebroadcastCurrentCasualSessionState(attempts: 3)
             } else if let service = casualRoomService {
+                MultiplayerTelemetry.shared.log(event: "spectator_snapshot_requested", source: "resume")
                 Task { await service.requestGameStateSnapshot() }
             }
             // Active-player validation on resume: a peer's authoritative rebroadcast
@@ -680,6 +683,7 @@ final class AppViewModel {
             guard let session = self.activeSession,
                   session.mode == .multiDevice || session.mode == .teamMode else { return }
             if self.isCurrentUserHost || self.isCurrentPlayerTurn(in: session) {
+                MultiplayerTelemetry.shared.log(event: "spectator_snapshot_received", source: "peer")
                 self.rebroadcastCurrentCasualSessionState(attempts: 2)
             }
         }
@@ -763,10 +767,32 @@ final class AppViewModel {
         // rejections (stale_turn / not_active_player) and exhausted retries on
         // rpc_failed both abort the advance, so two clients can never race past
         // the backend.
+        MultiplayerTelemetry.shared.log(event: "turn_advance_requested", source: "ui", props: ["expected_index": "\(expectedIndex)"])
         for attempt in 0..<3 {
+            let start = Date()
             let resp = await service.claimTurnAdvance(roomID: roomID, sessionToken: token, expectedIndex: expectedIndex)
-            if resp.success == true { return true }
+            let latency = Int(Date().timeIntervalSince(start) * 1000)
+            if resp.success == true {
+                let turnMs = MultiplayerTelemetry.shared.elapsedTurnMs()
+                MultiplayerTelemetry.shared.log(
+                    event: "turn_advance_authorized",
+                    source: "rpc",
+                    success: true,
+                    turn_rpc_latency_ms: latency,
+                    turn_duration_ms: turnMs
+                )
+                MultiplayerTelemetry.shared.markTurnStarted()
+                return true
+            }
             if resp.error == "rpc_failed" {
+                MultiplayerTelemetry.shared.log(
+                    event: "turn_advance_rpc_failed",
+                    source: "rpc",
+                    success: false,
+                    failure_reason: "rpc_failed",
+                    turn_rpc_latency_ms: latency,
+                    props: ["attempt": "\(attempt)"]
+                )
                 if attempt < 2 {
                     try? await Task.sleep(for: .milliseconds(350 * (attempt + 1)))
                     continue
@@ -774,6 +800,13 @@ final class AppViewModel {
                 syncErrorMessage = "Network error. Please try again."
                 return false
             }
+            MultiplayerTelemetry.shared.log(
+                event: "turn_advance_rejected",
+                source: "rpc",
+                success: false,
+                failure_reason: resp.error ?? "unknown",
+                turn_rpc_latency_ms: latency
+            )
             return false
         }
         return false
@@ -821,12 +854,16 @@ final class AppViewModel {
         if session.rematchPlayerIDs.contains(pid) { return }
         let newIDs = session.rematchPlayerIDs + [pid]
         updateSession(copying: session, rematchPlayerIDs: newIDs)
+        MultiplayerTelemetry.shared.log(event: "rematch_vote_submitted", source: "ui")
         // Authoritative per-player rematch readiness: write directly to backend
         // so the vote survives host backgrounding and host-independent reconnects.
         if let service = casualRoomService,
            let roomID = casualSessionRoomID,
            let token = casualSessionToken {
-            Task { await service.setRematchReady(roomID: roomID, sessionToken: token, isReady: true) }
+            Task {
+                await service.setRematchReady(roomID: roomID, sessionToken: token, isReady: true)
+                MultiplayerTelemetry.shared.log(event: "rematch_vote_persisted", source: "rpc", success: true)
+            }
         }
         // Keep broadcast for fast UX feedback on peer screens.
         rebroadcastCurrentCasualSessionState(attempts: 6)
@@ -839,6 +876,8 @@ final class AppViewModel {
         guard isCurrentUserHost else { return }
         guard session.mode == .multiDevice || session.mode == .teamMode else { return }
         isStartingRematch = true
+        MultiplayerTelemetry.shared.log(event: "rematch_started", source: "host", success: true)
+        MultiplayerTelemetry.shared.markSessionStarted()
         // Clear backend rematch flags and reset authoritative turn counter for
         // the new cycle. Non-host peers will learn the new turn ownership the
         // next time they call claimTurnAdvance (server CAS rejects stale clients).
@@ -2026,6 +2065,7 @@ final class AppViewModel {
                     try await databaseService.finalizeGame(sessionID: activeSessionRecordID, idempotencyKey: UUID())
                     try await refreshDashboardData()
                 } catch {
+                    MultiplayerTelemetry.shared.log(event: "results_delivery_failure", source: "rpc", success: false, failure_reason: String(describing: error))
                     errorMessage = error.localizedDescription
                 }
             }
@@ -2033,6 +2073,7 @@ final class AppViewModel {
 
         updateXPAfterMatch(game: session.game, isWin: results.first?.name == username)
         grantStarsAfterMatch(game: session.game, isWin: results.first?.name == username, mode: session.mode)
+        MultiplayerTelemetry.shared.log(event: "results_screen_shown", source: "session", success: true, props: ["player_count": "\(session.players.count)"])
     }
 
     private func updateXPAfterMatch(game: GameType, isWin: Bool) {

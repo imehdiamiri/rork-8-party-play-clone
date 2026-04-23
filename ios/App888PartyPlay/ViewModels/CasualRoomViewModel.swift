@@ -171,6 +171,16 @@ final class CasualRoomViewModel {
                 roomService.startHeartbeat(roomID: created.id, sessionToken: token)
                 startLobbyWatchdog()
                 startWaitingTimer()
+                MultiplayerTelemetry.shared.setContext(
+                    room_id: created.id.uuidString,
+                    player_id: playerID.uuidString,
+                    user_role: "host",
+                    game_type: gameType.rawValue,
+                    room_status: created.status.rawValue,
+                    player_count: created.players.count,
+                    session_token_hash: MultiplayerTelemetry.safeTokenHash(token)
+                )
+                MultiplayerTelemetry.shared.log(event: "room_create_succeeded", source: "ui", success: true)
             } catch {
                 errorMessage = error.localizedDescription
                 localPlayer = nil
@@ -221,7 +231,24 @@ final class CasualRoomViewModel {
                 roomService.startHeartbeat(roomID: joined.id, sessionToken: token)
                 startLobbyWatchdog()
                 startWaitingTimer()
+                MultiplayerTelemetry.shared.setContext(
+                    room_id: joined.id.uuidString,
+                    player_id: playerID.uuidString,
+                    user_role: "guest",
+                    game_type: joined.gameType.rawValue,
+                    room_status: joined.status.rawValue,
+                    player_count: joined.players.count,
+                    session_token_hash: MultiplayerTelemetry.safeTokenHash(token)
+                )
+                MultiplayerTelemetry.shared.log(event: "room_join_succeeded", source: "ui", success: true)
             } catch {
+                MultiplayerTelemetry.shared.log(
+                    event: "room_join_failed",
+                    source: "ui",
+                    success: false,
+                    failure_reason: String(describing: error),
+                    props: ["code": trimmedCode]
+                )
                 errorMessage = error.localizedDescription
                 localPlayer = nil
             }
@@ -254,6 +281,8 @@ final class CasualRoomViewModel {
         readyCheckActive = true
         readyCheckLocalConfirmed = true
         readyConfirmedPlayerIDs = [localPlayer.id]
+        MultiplayerTelemetry.shared.log(event: "ready_check_started", source: "ui", props: ["player_count": "\(room.players.count)"])
+        MultiplayerTelemetry.shared.log(event: "player_ready_submitted", source: "ui")
         Task {
             await roomService.clearAllReady(roomID: room.id, hostSessionToken: sessionToken)
             await roomService.setPlayerReady(roomID: room.id, sessionToken: sessionToken, isReady: true)
@@ -279,6 +308,7 @@ final class CasualRoomViewModel {
         if !readyCheckLocalConfirmed {
             readyCheckLocalConfirmed = true
             readyConfirmedPlayerIDs.insert(localPlayer.id)
+            MultiplayerTelemetry.shared.log(event: "player_ready_submitted", source: "ui")
             Task {
                 await roomService.setPlayerReady(roomID: room.id, sessionToken: sessionToken, isReady: true)
                 await roomService.broadcastReadyCheckConfirmed(playerID: localPlayer.id)
@@ -322,6 +352,9 @@ final class CasualRoomViewModel {
         self.room = startingRoom
         readyCheckActive = false
         gameStarted = true
+        MultiplayerTelemetry.shared.setContext(room_status: startingRoom.status.rawValue, player_count: startingRoom.players.count)
+        MultiplayerTelemetry.shared.markSessionStarted()
+        MultiplayerTelemetry.shared.log(event: "match_start_succeeded", source: "host", success: true, props: ["player_count": "\(startingRoom.players.count)"])
         Task {
             try? await roomService.startGame(room: startingRoom, hostSessionToken: sessionToken)
         }
@@ -413,6 +446,11 @@ final class CasualRoomViewModel {
         waitingTimerTask = nil
         lobbyStartTime = nil
         waitingTooLong = false
+        if MultiplayerTelemetry.shared.elapsedSessionMs() != nil {
+            MultiplayerTelemetry.shared.classify(outcome: gameStarted ? .abandoned_by_players : .failed_to_start, phaseAtExit: room?.status.rawValue)
+        }
+        Task { await MultiplayerTelemetry.shared.flush() }
+        MultiplayerTelemetry.shared.clearContext()
         roomService.stopHeartbeat()
         Task {
             if let room, let localPlayer {
@@ -511,6 +549,8 @@ final class CasualRoomViewModel {
         roomService.onPlayerKicked = { [weak self] playerID in
             guard let self else { return }
             if self.localPlayer?.id == playerID {
+                MultiplayerTelemetry.shared.log(event: "forced_return_home", source: "kick", props: ["reason": "kicked"])
+                MultiplayerTelemetry.shared.classify(outcome: .kicked_player_exit, phaseAtExit: self.room?.status.rawValue)
                 if self.gameStarted {
                     self.shouldAutoDismissLobby = true
                     self.onSessionEnded?()
@@ -526,6 +566,8 @@ final class CasualRoomViewModel {
         roomService.onRoomClosed = { [weak self] in
             guard let self else { return }
             if !self.isHost {
+                MultiplayerTelemetry.shared.log(event: "forced_return_home", source: "room_closed", props: ["reason": "host_closed"])
+                MultiplayerTelemetry.shared.classify(outcome: .closed_by_host, phaseAtExit: self.room?.status.rawValue)
                 if self.gameStarted {
                     self.shouldAutoDismissLobby = true
                     self.onSessionEnded?()
