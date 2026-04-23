@@ -27,7 +27,7 @@ export default function Shell({ email, children }: { email: string; children: Re
   return (
     <div className="min-h-screen grid grid-cols-[240px_1fr]">
       <aside className="border-r border-border bg-panel p-4 flex flex-col">
-        <div className="text-lg font-semibold mb-6 px-2">888Play Admin</div>
+        <div className="text-lg font-semibold mb-6 px-2">8PartyPlay Admin</div>
         <nav className="flex flex-col gap-1">
           {NAV.map(n => {
             const active = path === n.href || (n.href !== "/admin" && path.startsWith(n.href));

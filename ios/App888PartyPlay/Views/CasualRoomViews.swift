@@ -412,7 +412,7 @@ struct HostLobbyView: View {
                     .buttonStyle(.plain)
 
                     if let code = room?.code, let gameName = room?.gameType.name {
-                        ShareLink(item: "\(code)\n\nJoin me on 888PartyPlay to play together!\n(Game: \(gameName))") {
+                        ShareLink(item: "\(code)\n\nJoin me on 8PartyPlay to play together!\n(Game: \(gameName))") {
                             Label("Share", systemImage: "square.and.arrow.up")
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(.white)
@@ -525,7 +525,7 @@ struct HostLobbyView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     HStack(spacing: 8) {
                         if let code = room.code.isEmpty ? nil : room.code as String?, let gameName = room.gameType.name as String? {
-                            ShareLink(item: "\(code)\n\nJoin me on 888PartyPlay to play together!\n(Game: \(gameName))") {
+                            ShareLink(item: "\(code)\n\nJoin me on 8PartyPlay to play together!\n(Game: \(gameName))") {
                                 Text("Invite")
                                     .font(.caption.weight(.bold))
                                     .foregroundStyle(.white)

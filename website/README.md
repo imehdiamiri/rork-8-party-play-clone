@@ -1,6 +1,6 @@
-# 888Play Admin Panel
+# 8PartyPlay Admin Panel
 
-A full-featured Next.js 15 admin dashboard for 888Play, backed by Supabase.
+A full-featured Next.js 15 admin dashboard for 8PartyPlay, backed by Supabase.
 
 ## Features
 - Dashboard with KPIs (DAU/WAU/MAU, subs, stars, AI)

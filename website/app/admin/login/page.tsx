@@ -33,7 +33,7 @@ function LoginForm() {
   return (
     <form onSubmit={submit} className="card p-8 w-full max-w-sm space-y-4">
       <div>
-        <div className="text-xl font-semibold">888Play Admin</div>
+        <div className="text-xl font-semibold">8PartyPlay Admin</div>
         <div className="text-sm text-muted mt-1">Sign in with your admin email</div>
       </div>
       <input className="input" type="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)} required />
