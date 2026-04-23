@@ -200,7 +200,31 @@ struct CoinFlipToolView: View {
             let goldDeep = Color(red: 0.45, green: 0.27, blue: 0.02)
             let goldMid = Color(red: 0.82, green: 0.56, blue: 0.08)
 
-            ZStack {
+            AsyncImage(url: URL(string: "https://r2-pub.rork.com/generated-images/708dee98-06f8-4660-b0d7-008df8751a65.png")) { phase in
+                if let image = phase.image {
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .scaleEffect(x: isHeads ? 1 : -1, y: 1)
+                        .frame(width: size, height: size)
+                        .overlay(alignment: .bottom) {
+                            Text(isHeads ? "HEADS" : "TAILS")
+                                .font(.system(size: size * 0.09, weight: .black, design: .rounded))
+                                .foregroundStyle(goldDeep)
+                                .shadow(color: goldLight.opacity(0.6), radius: 0.5, y: 0.5)
+                                .padding(.bottom, size * 0.08)
+                        }
+                        .shadow(color: .black.opacity(0.4), radius: 10, y: 6)
+                } else {
+                    fallbackCoinFace(isHeads: isHeads, size: size, gold: gold, goldLight: goldLight, goldDeep: goldDeep, goldMid: goldMid)
+                }
+            }
+            .frame(width: size, height: size)
+        }
+    }
+
+    private func fallbackCoinFace(isHeads: Bool, size: CGFloat, gold: Color, goldLight: Color, goldDeep: Color, goldMid: Color) -> some View {
+        ZStack {
                 // Outer rim with metallic sheen
                 Circle()
                     .fill(
@@ -346,9 +370,8 @@ struct CoinFlipToolView: View {
                     )
                     .blendMode(.multiply)
                     .allowsHitTesting(false)
-            }
-            .frame(width: size, height: size)
         }
+        .frame(width: size, height: size)
     }
 
     private func reededEdge(size: CGFloat) -> some View {

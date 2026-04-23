@@ -248,7 +248,7 @@ struct SpinBottleSessionView: View {
     }
 
     private func bottleView(size: CGFloat) -> some View {
-        AsyncImage(url: URL(string: "https://r2-pub.rork.com/generated-images/b5219006-0da9-4c7d-8d11-facb9251c06a.png")) { phase in
+        AsyncImage(url: URL(string: "https://r2-pub.rork.com/generated-images/30df8ecc-08f0-4734-b71e-273c29a1a88c.png")) { phase in
             if let image = phase.image {
                 image.resizable().aspectRatio(contentMode: .fit)
             } else {

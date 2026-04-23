@@ -625,7 +625,7 @@ struct BottleToolView: View {
     }
 
     private func bottleView(size: CGFloat) -> some View {
-        AsyncImage(url: URL(string: "https://r2-pub.rork.com/generated-images/34a4521d-fdfd-41b9-a035-e98505e5dfb8.png")) { phase in
+        AsyncImage(url: URL(string: "https://r2-pub.rork.com/generated-images/30df8ecc-08f0-4734-b71e-273c29a1a88c.png")) { phase in
             if let image = phase.image {
                 image.resizable().aspectRatio(contentMode: .fit)
             } else {
