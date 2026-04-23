@@ -16,6 +16,7 @@ final class CasualRoomViewModel {
     var wasKicked: Bool = false
     var roomClosed: Bool = false
     var hostLeft: Bool = false
+    private var isStartingGame: Bool = false
     var shouldAutoDismissLobby: Bool = false
     var waitingTooLong: Bool = false
     var isReconnecting: Bool = false
@@ -246,7 +247,10 @@ final class CasualRoomViewModel {
     }
 
     func startGame() {
+        guard !isStartingGame else { return }
         guard canStart, let room, let localPlayer else { return }
+        guard room.status == .waiting || room.status == .full else { return }
+        isStartingGame = true
         readyCheckActive = true
         readyCheckLocalConfirmed = true
         readyConfirmedPlayerIDs = [localPlayer.id]
@@ -264,6 +268,10 @@ final class CasualRoomViewModel {
             }
         }
         checkAllReadyAndStart()
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            await MainActor.run { self?.isStartingGame = false }
+        }
     }
 
     func confirmReady() {
@@ -508,6 +516,9 @@ final class CasualRoomViewModel {
                     self.onSessionEnded?()
                 }
                 self.wasKicked = true
+                // Invalidate the stored guest session so the kicked player can
+                // not silently auto-rejoin this room from a cached session token.
+                GuestSessionStore.clear()
                 self.disconnect()
             }
         }
@@ -598,6 +609,7 @@ final class CasualRoomViewModel {
                     onSessionEnded?()
                 }
                 wasKicked = true
+                GuestSessionStore.clear()
                 disconnect()
                 return
             }

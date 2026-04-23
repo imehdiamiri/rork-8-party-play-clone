@@ -825,6 +825,7 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
     let tapInOrderState: SessionStateTapInOrderRecord?
     let colorTrapState: SessionStateColorTrapRecord?
     let rematchPlayerIDs: [String]
+    let stateVersion: Int
 
     init(
         gameKey: String,
@@ -846,7 +847,8 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
         memoryPathState: SessionStateMemoryPathRecord? = nil,
         tapInOrderState: SessionStateTapInOrderRecord? = nil,
         colorTrapState: SessionStateColorTrapRecord? = nil,
-        rematchPlayerIDs: [String] = []
+        rematchPlayerIDs: [String] = [],
+        stateVersion: Int = 0
     ) {
         self.gameKey = gameKey
         self.mode = mode
@@ -868,6 +870,7 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
         self.tapInOrderState = tapInOrderState
         self.colorTrapState = colorTrapState
         self.rematchPlayerIDs = rematchPlayerIDs
+        self.stateVersion = stateVersion
     }
 
     enum CodingKeys: String, CodingKey {
@@ -891,6 +894,7 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
         case tapInOrderState = "tap_in_order_state"
         case colorTrapState = "color_trap_state"
         case rematchPlayerIDs = "rematch_player_ids"
+        case stateVersion = "state_version"
     }
 
     init(from decoder: Decoder) throws {
@@ -915,6 +919,7 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
         tapInOrderState = try c.decodeIfPresent(SessionStateTapInOrderRecord.self, forKey: .tapInOrderState)
         colorTrapState = try c.decodeIfPresent(SessionStateColorTrapRecord.self, forKey: .colorTrapState)
         rematchPlayerIDs = (try? c.decodeIfPresent([String].self, forKey: .rematchPlayerIDs)) ?? []
+        stateVersion = (try? c.decodeIfPresent(Int.self, forKey: .stateVersion)) ?? 0
     }
 }
 

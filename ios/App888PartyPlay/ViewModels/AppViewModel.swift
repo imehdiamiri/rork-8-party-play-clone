@@ -118,6 +118,10 @@ final class AppViewModel {
     private var timerTask: Task<Void, Never>?
     private var wasInBackground: Bool = false
     private var backgroundTimersPaused: Bool = false
+    private var currentStateVersion: Int = 0
+    private var lastAppliedRemoteVersion: Int = 0
+    private var casualRebroadcastPumpTask: Task<Void, Never>?
+    private var isStartingRematch: Bool = false
 
     init() {
         self.authService = SupabaseAuthService()
@@ -222,6 +226,11 @@ final class AppViewModel {
                 startTimer()
             }
             backgroundTimersPaused = false
+            // Host: immediately rebroadcast so backgrounded peers re-sync on our resume.
+            // Non-host: the host's pump will rebroadcast within ~1.5s.
+            if isCurrentUserHost {
+                rebroadcastCurrentCasualSessionState(attempts: 3)
+            }
         } else if currentRoom != nil, let code = currentRoom?.code {
             observeRoom(code: code)
         }
@@ -635,7 +644,13 @@ final class AppViewModel {
 
     func startCasualMultiplayerSession(game: GameType, mode: GameMode, players: [PlayerProfile], roomCode: String, localPlayerID: UUID?, sessionID: UUID? = nil, syncToPeers: Bool = true) {
         sessionOverridePlayerID = localPlayerID
+        // Reset monotonic counters for the new match so stateVersion starts fresh.
+        currentStateVersion = 0
+        lastAppliedRemoteVersion = 0
         startSession(game: game, mode: mode, players: players, roomCode: roomCode, sessionID: sessionID, syncToPeers: syncToPeers)
+        if mode == .multiDevice || mode == .teamMode {
+            startCasualRebroadcastPump()
+        }
     }
 
     func attachCasualRoomService(_ service: CasualRoomService, localPlayerID: UUID?, roomID: UUID?, sessionToken: String?, cleanup: (() -> Void)? = nil) {
@@ -681,6 +696,36 @@ final class AppViewModel {
         }
     }
 
+    /// Starts a periodic rebroadcast loop so backgrounded/late-joining peers
+    /// receive the latest authoritative session state without needing a DB fetch.
+    /// Only the host pushes; all other clients treat their inbound stream as
+    /// monotonic via `stateVersion`.
+    private func startCasualRebroadcastPump() {
+        casualRebroadcastPumpTask?.cancel()
+        casualRebroadcastPumpTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(1500))
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard let self else { return }
+                    guard let session = self.activeSession,
+                          session.mode == .multiDevice || session.mode == .teamMode,
+                          self.isCurrentUserHost,
+                          let service = self.casualRoomService else { return }
+                    let state = self.makeSessionStateRecord(from: session)
+                    let origin = self.casualSessionOriginPlayerID ?? self.sessionPlayerID ?? UUID()
+                    let payload = CasualGameStatePayload(sessionId: session.id.uuidString, originPlayerId: origin.uuidString, state: state)
+                    Task { await service.broadcastGameState(payload) }
+                }
+            }
+        }
+    }
+
+    private func stopCasualRebroadcastPump() {
+        casualRebroadcastPumpTask?.cancel()
+        casualRebroadcastPumpTask = nil
+    }
+
     // MARK: - Rematch
 
     func voteForRematch() {
@@ -690,13 +735,17 @@ final class AppViewModel {
         if session.rematchPlayerIDs.contains(pid) { return }
         let newIDs = session.rematchPlayerIDs + [pid]
         updateSession(copying: session, rematchPlayerIDs: newIDs)
-        rebroadcastCurrentCasualSessionState(attempts: 2)
+        // Broadcast rematch vote aggressively so the host always sees it even
+        // if they were briefly offline. The pump ticks every 1.5s too.
+        rebroadcastCurrentCasualSessionState(attempts: 6)
     }
 
     func startRematch() {
+        guard !isStartingRematch else { return }
         guard let session = activeSession else { return }
         guard isCurrentUserHost else { return }
         guard session.mode == .multiDevice || session.mode == .teamMode else { return }
+        isStartingRematch = true
         let freshPlayers = session.players.map { p in
             PlayerProfile(id: p.id, username: p.username, isHost: p.isHost, isReady: p.isReady, isOnline: p.isOnline, score: 0)
         }
@@ -710,7 +759,15 @@ final class AppViewModel {
             sessionID: session.id,
             syncToPeers: true
         )
-        rebroadcastCurrentCasualSessionState()
+        // Explicitly clear any stale rematch flags on the new session payload.
+        if let fresh = activeSession {
+            updateSession(copying: fresh, rematchPlayerIDs: [])
+        }
+        rebroadcastCurrentCasualSessionState(attempts: 6)
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            await MainActor.run { self?.isStartingRematch = false }
+        }
     }
 
     var hasVotedRematch: Bool {
@@ -736,11 +793,30 @@ final class AppViewModel {
            let local = casualSessionOriginPlayerID,
            origin == local { return }
         let state = payload.state
+        // Monotonic version guard: drop payloads that are older than what we've
+        // already applied. Prevents a stale late broadcast from overwriting a
+        // newer state (e.g. right after a turn change).
+        if state.stateVersion > 0,
+           state.stateVersion < lastAppliedRemoteVersion {
+            return
+        }
         let sessionID = UUID(uuidString: payload.sessionId) ?? activeSession?.id ?? UUID()
         isApplyingRemoteSessionState = true
         defer { isApplyingRemoteSessionState = false }
         let session = buildSession(fromState: state, sessionID: sessionID)
         activeSession = session
+        lastAppliedRemoteVersion = max(lastAppliedRemoteVersion, state.stateVersion)
+        currentStateVersion = max(currentStateVersion, state.stateVersion)
+
+        // Host persistence: if this device is the host and a non-host peer just
+        // broadcast a rematch vote (or any merged state), write the updated
+        // record back to DB so the vote survives host backgrounding.
+        if isCurrentUserHost, let recordID = activeSessionRecordID, session.phase == .finished {
+            Task { [weak self] in
+                guard let self else { return }
+                try? await self.databaseService.updateSessionState(sessionID: recordID, state: state, status: "active")
+            }
+        }
     }
 
     // MARK: - Multiplayer Start
@@ -825,9 +901,13 @@ final class AppViewModel {
     func dismissSession() {
         timerTask?.cancel()
         timerTask = nil
+        stopCasualRebroadcastPump()
         activeSession = nil
         activeSessionRecordID = nil
         sessionOverridePlayerID = nil
+        currentStateVersion = 0
+        lastAppliedRemoteVersion = 0
+        isStartingRematch = false
         detachCasualRoomService()
         resilienceService.clearActiveSession()
     }
@@ -2074,14 +2154,31 @@ final class AppViewModel {
     }
 
     private func updateSession(_ session: GameSession, syncToPeers: Bool = true) {
-        activeSession = session
+        // Increment monotonic version for every local mutation that will be broadcast.
+        if !isApplyingRemoteSessionState,
+           (session.mode == .multiDevice || session.mode == .teamMode) {
+            currentStateVersion += 1
+        }
+        let versioned = GameSession(
+            id: session.id, game: session.game, mode: session.mode, roomCode: session.roomCode,
+            players: session.players, rounds: session.rounds, currentRoundIndex: session.currentRoundIndex,
+            phase: session.phase, secondsRemaining: session.secondsRemaining,
+            latestAwardedPoints: session.latestAwardedPoints, latestFeedback: session.latestFeedback,
+            results: session.results, liveState: session.liveState,
+            fakeAnswerState: session.fakeAnswerState, passGuessState: session.passGuessState,
+            guessTheSecondsState: session.guessTheSecondsState, memoryGridState: session.memoryGridState,
+            memoryPathState: session.memoryPathState, tapInOrderState: session.tapInOrderState,
+            colorTrapState: session.colorTrapState, rematchPlayerIDs: session.rematchPlayerIDs,
+            stateVersion: currentStateVersion
+        )
+        activeSession = versioned
         guard !isApplyingRemoteSessionState else { return }
-        guard session.mode == .multiDevice || session.mode == .teamMode else { return }
-        let state = makeSessionStateRecord(from: session)
+        guard versioned.mode == .multiDevice || versioned.mode == .teamMode else { return }
+        let state = makeSessionStateRecord(from: versioned)
 
-        if syncToPeers, let service = casualRoomService, session.roomCode != nil {
+        if syncToPeers, let service = casualRoomService, versioned.roomCode != nil {
             let origin = casualSessionOriginPlayerID ?? sessionPlayerID ?? UUID()
-            let payload = CasualGameStatePayload(sessionId: session.id.uuidString, originPlayerId: origin.uuidString, state: state)
+            let payload = CasualGameStatePayload(sessionId: versioned.id.uuidString, originPlayerId: origin.uuidString, state: state)
             Task { await service.broadcastGameState(payload) }
         }
 
@@ -2209,7 +2306,8 @@ final class AppViewModel {
                     isFinished: ct.isFinished
                 )
             },
-            rematchPlayerIDs: session.rematchPlayerIDs.map { $0.uuidString }
+            rematchPlayerIDs: session.rematchPlayerIDs.map { $0.uuidString },
+            stateVersion: session.stateVersion
         )
     }
 
@@ -2338,7 +2436,8 @@ final class AppViewModel {
                     isFinished: ct.isFinished
                 )
             },
-            rematchPlayerIDs: state.rematchPlayerIDs.compactMap { UUID(uuidString: $0) }
+            rematchPlayerIDs: state.rematchPlayerIDs.compactMap { UUID(uuidString: $0) },
+            stateVersion: state.stateVersion
         )
     }
 

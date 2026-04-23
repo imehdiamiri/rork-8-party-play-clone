@@ -338,11 +338,14 @@ final class CasualRoomService {
 
         guard let playerRecord = records.first else { return nil }
 
+        // Allow reconnecting into a match that is already starting or in progress,
+        // so a guest who backgrounds during gameplay can re-enter the active
+        // session instead of being dropped to Home.
         let roomRecords: [CasualRoomRecord] = try await supabase.client
             .from("casual_rooms")
             .select()
             .eq("id", value: playerRecord.roomId)
-            .in("status", values: ["waiting", "full"])
+            .in("status", values: ["waiting", "full", "starting", "in_progress"])
             .limit(1)
             .execute()
             .value

@@ -400,7 +400,7 @@ struct MemoryGridSessionView: View {
 
     private func startSpectatorBroadcastTimer() {
         spectatorBroadcastTimer?.invalidate()
-        spectatorBroadcastTimer = Timer.scheduledTimer(withTimeInterval: 1.8, repeats: true) { _ in
+        spectatorBroadcastTimer = Timer.scheduledTimer(withTimeInterval: 0.7, repeats: true) { _ in
             Task { @MainActor in
                 guard isMultiDevice,
                       let current = appModel.activeSession,
