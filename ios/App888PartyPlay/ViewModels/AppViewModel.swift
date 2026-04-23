@@ -110,7 +110,14 @@ final class AppViewModel {
     }
 
     private var isApplyingRemoteSessionState: Bool = false
-    private weak var casualRoomService: CasualRoomService?
+    // Strong reference: the guest's CasualJoinRoomView owns CasualRoomViewModel via
+    // @State. When the QuickJoinSheet fullScreenCover dismisses to let the game
+    // session cover open, that view (and the VM) deallocate. A weak ref here
+    // would release the CasualRoomService, unsubscribe its realtime channel, and
+    // freeze the guest on the spectator view with no inbound game-state updates
+    // and no way to exit. The session must outlive the lobby sheet, so the app
+    // model retains the service until `detachCasualRoomService()`.
+    private var casualRoomService: CasualRoomService?
     private var casualSessionOriginPlayerID: UUID?
     private var casualSessionRoomID: UUID?
     private var casualSessionToken: String?
@@ -690,6 +697,9 @@ final class AppViewModel {
     }
 
     func detachCasualRoomService() {
+        if let service = casualRoomService {
+            Task { await service.disconnect() }
+        }
         casualRoomService = nil
         casualSessionOriginPlayerID = nil
         casualSessionRoomID = nil

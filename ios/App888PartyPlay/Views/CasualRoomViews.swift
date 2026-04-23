@@ -643,7 +643,7 @@ fileprivate func startGameSession(appModel: AppViewModel, casualVM: CasualRoomVi
         // must dismiss the join sheet FIRST, then set activeSession.
         appModel.requestCasualSheetDismiss = true
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(650))
+            try? await Task.sleep(for: .milliseconds(350))
             guard appModel.activeSession?.roomCode != roomCode else {
                 appModel.requestCasualSheetDismiss = false
                 return
@@ -658,6 +658,9 @@ fileprivate func startGameSession(appModel: AppViewModel, casualVM: CasualRoomVi
                 syncToPeers: false
             )
             appModel.requestCasualSheetDismiss = false
+            // Guest just entered the session — request an immediate snapshot so
+            // we don't wait up to 1.5s for the host's rebroadcast pump.
+            Task { await service.requestGameStateSnapshot() }
         }
     }
 }
@@ -730,7 +733,7 @@ struct GuestLobbyView: View {
         }
         .task(id: casualVM.gameStarted) {
             guard casualVM.gameStarted else { return }
-            try? await Task.sleep(for: .milliseconds(450))
+            try? await Task.sleep(for: .milliseconds(120))
             guard casualVM.gameStarted else { return }
             startGameSession(appModel: appModel, casualVM: casualVM)
         }
