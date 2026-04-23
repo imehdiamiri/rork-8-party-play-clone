@@ -200,7 +200,7 @@ struct CoinFlipToolView: View {
             let goldDeep = Color(red: 0.45, green: 0.27, blue: 0.02)
             let goldMid = Color(red: 0.82, green: 0.56, blue: 0.08)
 
-            AsyncImage(url: URL(string: "https://r2-pub.rork.com/generated-images/708dee98-06f8-4660-b0d7-008df8751a65.png")) { phase in
+            AsyncImage(url: URL(string: "https://r2-pub.rork.com/generated-images/5ed19d54-708a-4c39-bd70-944d23883fc4.png")) { phase in
                 if let image = phase.image {
                     image
                         .resizable()
