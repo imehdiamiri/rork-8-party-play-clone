@@ -297,6 +297,35 @@ struct CasualLobbyView: View {
     }
 }
 
+struct ResyncBannerView: View {
+    let message: String
+
+    private var isGood: Bool { message == "Connection restored" }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: isGood ? "checkmark.circle.fill" : "dot.radiowaves.left.and.right")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isGood ? .green : .orange)
+            Text(message)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.9))
+            Spacer(minLength: 0)
+            if !isGood {
+                ProgressView().controlSize(.small).tint(.orange)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background((isGood ? Color.green : Color.orange).opacity(0.12), in: .rect(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder((isGood ? Color.green : Color.orange).opacity(0.35))
+        }
+        .transition(.opacity)
+    }
+}
+
 struct HostLobbyView: View {
     let appModel: AppViewModel
     @Bindable var casualVM: CasualRoomViewModel
@@ -311,6 +340,9 @@ struct HostLobbyView: View {
             AppBackgroundView()
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    if let banner = casualVM.resyncBanner {
+                        ResyncBannerView(message: banner)
+                    }
                     roomHeaderCard
                     hostActionsSection
                     playersSection
@@ -642,6 +674,9 @@ struct GuestLobbyView: View {
             AppBackgroundView()
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    if let banner = casualVM.resyncBanner {
+                        ResyncBannerView(message: banner)
+                    }
                     guestHeroCard
                     guestStatusCard
                     guestPlayersCard

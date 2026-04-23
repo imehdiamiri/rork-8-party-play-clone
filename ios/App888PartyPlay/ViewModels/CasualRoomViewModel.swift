@@ -19,6 +19,7 @@ final class CasualRoomViewModel {
     var shouldAutoDismissLobby: Bool = false
     var waitingTooLong: Bool = false
     var isReconnecting: Bool = false
+    var resyncBanner: String? = nil
     var readyCheckActive: Bool = false
     var readyCheckLocalConfirmed: Bool = false
     var readyConfirmedPlayerIDs: Set<UUID> = []
@@ -80,12 +81,22 @@ final class CasualRoomViewModel {
         case .active:
             guard isConnected, let room, let token = localPlayer?.sessionToken, !token.isEmpty else { return }
             isReconnecting = true
+            resyncBanner = "Re-syncing room…"
             roomService.startHeartbeat(roomID: room.id, sessionToken: token)
             startLobbyWatchdog()
             startWaitingTimer()
             Task {
                 await refreshRoomFromDB()
                 isReconnecting = false
+                // Keep the banner only while we have an active session; a successful refresh
+                // either restored the room or triggered a proper close path.
+                if self.room != nil {
+                    self.resyncBanner = "Connection restored"
+                    try? await Task.sleep(for: .seconds(1))
+                    if self.resyncBanner == "Connection restored" {
+                        self.resyncBanner = nil
+                    }
+                }
             }
         default:
             break
@@ -218,6 +229,8 @@ final class CasualRoomViewModel {
 
     func kickPlayer(_ player: GuestPlayer) {
         guard isHost, let room, player.id != localPlayer?.id else { return }
+        // Safety: only allow kicks before the match starts.
+        guard room.status == .waiting || room.status == .full else { return }
         Task {
             do {
                 try await roomService.kickPlayer(
@@ -614,6 +627,28 @@ final class CasualRoomViewModel {
                 readyCheckActive = !confirmedIDs.isEmpty
             } else {
                 readyCheckActive = false
+            }
+            // Host-disconnect banner: show a gentle recovery banner for guests when the
+            // host is momentarily offline, but do NOT tear down the room. The host's
+            // heartbeat keeps the backend record alive; only an explicit host leave
+            // closes the room.
+            if !isHost {
+                let hostOnline = players.first(where: { $0.isHost })?.isConnected ?? false
+                if !hostOnline && status != .closed {
+                    if resyncBanner == nil || resyncBanner == "Connection restored" {
+                        resyncBanner = "Host disconnected. Reconnecting…"
+                    }
+                } else if resyncBanner == "Host disconnected. Reconnecting…" {
+                    resyncBanner = "Connection restored"
+                    Task { [weak self] in
+                        try? await Task.sleep(for: .seconds(1))
+                        await MainActor.run {
+                            if self?.resyncBanner == "Connection restored" {
+                                self?.resyncBanner = nil
+                            }
+                        }
+                    }
+                }
             }
             if let localID = localPlayer?.id {
                 readyCheckLocalConfirmed = confirmedIDs.contains(localID)
