@@ -11,6 +11,14 @@ nonisolated struct CasualRPCResponse: Codable, Sendable {
     let stale_marked: Int?
 }
 
+nonisolated struct CasualTurnAdvanceResponse: Codable, Sendable {
+    let success: Bool?
+    let error: String?
+    let server_index: Int?
+    let active_player_id: String?
+    let turn_version: Int?
+}
+
 @MainActor
 final class CasualRoomService {
     private let supabase: SupabaseService
@@ -245,6 +253,73 @@ final class CasualRoomService {
         _ = try? await supabase.client
             .rpc("casual_clear_all_ready", params: params)
             .execute()
+    }
+
+    // MARK: - Authoritative turn advance
+
+    @discardableResult
+    func claimTurnAdvance(roomID: UUID, sessionToken: String, expectedIndex: Int) async -> CasualTurnAdvanceResponse {
+        let params: [String: AnyJSON] = [
+            "p_room_id": .string(roomID.uuidString),
+            "p_session_token": .string(sessionToken),
+            "p_expected_index": .integer(expectedIndex)
+        ]
+        do {
+            let resp: CasualTurnAdvanceResponse = try await supabase.client
+                .rpc("casual_claim_turn_advance", params: params)
+                .execute()
+                .value
+            return resp
+        } catch {
+            return CasualTurnAdvanceResponse(success: false, error: "rpc_failed", server_index: nil, active_player_id: nil, turn_version: nil)
+        }
+    }
+
+    func resetTurnCounter(roomID: UUID, hostSessionToken: String) async {
+        let params: [String: AnyJSON] = [
+            "p_room_id": .string(roomID.uuidString),
+            "p_host_session_token": .string(hostSessionToken)
+        ]
+        _ = try? await supabase.client
+            .rpc("casual_reset_turn", params: params)
+            .execute()
+    }
+
+    // MARK: - Per-player rematch readiness
+
+    func setRematchReady(roomID: UUID, sessionToken: String, isReady: Bool) async {
+        let params: [String: AnyJSON] = [
+            "p_room_id": .string(roomID.uuidString),
+            "p_session_token": .string(sessionToken),
+            "p_ready": .bool(isReady)
+        ]
+        _ = try? await supabase.client
+            .rpc("casual_set_rematch_ready", params: params)
+            .execute()
+    }
+
+    func clearAllRematch(roomID: UUID, hostSessionToken: String) async {
+        let params: [String: AnyJSON] = [
+            "p_room_id": .string(roomID.uuidString),
+            "p_host_session_token": .string(hostSessionToken)
+        ]
+        _ = try? await supabase.client
+            .rpc("casual_clear_all_rematch", params: params)
+            .execute()
+    }
+
+    func fetchRematchReadyPlayerIDs(roomID: UUID) async -> Set<UUID> {
+        do {
+            let records: [CasualRoomPlayerRecord] = try await supabase.client
+                .from("casual_room_players")
+                .select()
+                .eq("room_id", value: roomID)
+                .execute()
+                .value
+            return Set(records.compactMap { $0.rematchReadyAt == nil ? nil : $0.guestPlayerId })
+        } catch {
+            return []
+        }
     }
 
     func setPlayerReady(roomID: UUID, sessionToken: String, isReady: Bool) async {

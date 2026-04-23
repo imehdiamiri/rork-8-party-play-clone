@@ -79,6 +79,7 @@ nonisolated struct CasualRoomPlayerRecord: Codable, Identifiable, Hashable, Send
     let joinedAt: Date?
     let lastSeenAt: Date?
     let readyConfirmedAt: Date?
+    let rematchReadyAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -92,6 +93,23 @@ nonisolated struct CasualRoomPlayerRecord: Codable, Identifiable, Hashable, Send
         case joinedAt = "joined_at"
         case lastSeenAt = "last_seen_at"
         case readyConfirmedAt = "ready_confirmed_at"
+        case rematchReadyAt = "rematch_ready_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        roomId = try c.decode(UUID.self, forKey: .roomId)
+        guestPlayerId = try c.decode(UUID.self, forKey: .guestPlayerId)
+        displayName = try c.decode(String.self, forKey: .displayName)
+        normalizedDisplayName = try c.decode(String.self, forKey: .normalizedDisplayName)
+        isHost = try c.decode(Bool.self, forKey: .isHost)
+        isConnected = try c.decode(Bool.self, forKey: .isConnected)
+        sessionToken = try c.decode(String.self, forKey: .sessionToken)
+        joinedAt = try c.decodeIfPresent(Date.self, forKey: .joinedAt)
+        lastSeenAt = try c.decodeIfPresent(Date.self, forKey: .lastSeenAt)
+        readyConfirmedAt = try c.decodeIfPresent(Date.self, forKey: .readyConfirmedAt)
+        rematchReadyAt = try? c.decodeIfPresent(Date.self, forKey: .rematchReadyAt)
     }
 
     func toGuestPlayer() -> GuestPlayer {

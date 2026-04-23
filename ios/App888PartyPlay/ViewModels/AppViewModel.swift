@@ -121,6 +121,7 @@ final class AppViewModel {
     private var currentStateVersion: Int = 0
     private var lastAppliedRemoteVersion: Int = 0
     private var casualRebroadcastPumpTask: Task<Void, Never>?
+    private var casualRematchPollTask: Task<Void, Never>?
     private var isStartingRematch: Bool = false
 
     init() {
@@ -726,6 +727,57 @@ final class AppViewModel {
         casualRebroadcastPumpTask = nil
     }
 
+    // MARK: - Authoritative turn guard
+
+    /// Attempts to claim the next turn advance against the backend. Returns true
+    /// if the caller is the real active player and the CAS on turn_version wins.
+    /// For single-device / pre-attach modes this is a no-op that returns true.
+    func authorizeCasualTurnAdvance(expectedIndex: Int) async -> Bool {
+        guard activeSession?.mode == .multiDevice || activeSession?.mode == .teamMode else { return true }
+        guard let service = casualRoomService,
+              let roomID = casualSessionRoomID,
+              let token = casualSessionToken else { return true }
+        let resp = await service.claimTurnAdvance(roomID: roomID, sessionToken: token, expectedIndex: expectedIndex)
+        if resp.success == true { return true }
+        // Network/RPC failures must not permanently block gameplay. Only an
+        // explicit server rejection (stale_turn / not_active_player) aborts.
+        if resp.error == "rpc_failed" { return true }
+        return false
+    }
+
+    // MARK: - Rematch backend polling
+
+    /// Polls backend `rematch_ready_at` per player so every device sees the same
+    /// authoritative vote list on the results screen, without depending on the
+    /// host being online to merge peer broadcasts.
+    func startCasualRematchPollIfNeeded() {
+        guard casualRematchPollTask == nil else { return }
+        guard let service = casualRoomService, let roomID = casualSessionRoomID else { return }
+        casualRematchPollTask = Task { [weak self] in
+            while !Task.isCancelled {
+                let ids = await service.fetchRematchReadyPlayerIDs(roomID: roomID)
+                await MainActor.run {
+                    guard let self else { return }
+                    guard let session = self.activeSession, session.phase == .finished else {
+                        self.casualRematchPollTask?.cancel()
+                        self.casualRematchPollTask = nil
+                        return
+                    }
+                    let merged = Array(Set(session.rematchPlayerIDs).union(ids))
+                    if Set(merged) != Set(session.rematchPlayerIDs) {
+                        self.updateSession(copying: session, rematchPlayerIDs: merged)
+                    }
+                }
+                try? await Task.sleep(for: .milliseconds(1500))
+            }
+        }
+    }
+
+    func stopCasualRematchPoll() {
+        casualRematchPollTask?.cancel()
+        casualRematchPollTask = nil
+    }
+
     // MARK: - Rematch
 
     func voteForRematch() {
@@ -735,9 +787,16 @@ final class AppViewModel {
         if session.rematchPlayerIDs.contains(pid) { return }
         let newIDs = session.rematchPlayerIDs + [pid]
         updateSession(copying: session, rematchPlayerIDs: newIDs)
-        // Broadcast rematch vote aggressively so the host always sees it even
-        // if they were briefly offline. The pump ticks every 1.5s too.
+        // Authoritative per-player rematch readiness: write directly to backend
+        // so the vote survives host backgrounding and host-independent reconnects.
+        if let service = casualRoomService,
+           let roomID = casualSessionRoomID,
+           let token = casualSessionToken {
+            Task { await service.setRematchReady(roomID: roomID, sessionToken: token, isReady: true) }
+        }
+        // Keep broadcast for fast UX feedback on peer screens.
         rebroadcastCurrentCasualSessionState(attempts: 6)
+        startCasualRematchPollIfNeeded()
     }
 
     func startRematch() {
@@ -746,6 +805,17 @@ final class AppViewModel {
         guard isCurrentUserHost else { return }
         guard session.mode == .multiDevice || session.mode == .teamMode else { return }
         isStartingRematch = true
+        // Clear backend rematch flags and reset authoritative turn counter for
+        // the new cycle. Non-host peers will learn the new turn ownership the
+        // next time they call claimTurnAdvance (server CAS rejects stale clients).
+        if let service = casualRoomService,
+           let roomID = casualSessionRoomID,
+           let token = casualSessionToken {
+            Task {
+                await service.clearAllRematch(roomID: roomID, hostSessionToken: token)
+                await service.resetTurnCounter(roomID: roomID, hostSessionToken: token)
+            }
+        }
         let freshPlayers = session.players.map { p in
             PlayerProfile(id: p.id, username: p.username, isHost: p.isHost, isReady: p.isReady, isOnline: p.isOnline, score: 0)
         }
@@ -807,6 +877,11 @@ final class AppViewModel {
         activeSession = session
         lastAppliedRemoteVersion = max(lastAppliedRemoteVersion, state.stateVersion)
         currentStateVersion = max(currentStateVersion, state.stateVersion)
+
+        // Kick off backend rematch polling once any device transitions to finished.
+        if session.phase == .finished {
+            startCasualRematchPollIfNeeded()
+        }
 
         // Host persistence: if this device is the host and a non-host peer just
         // broadcast a rematch vote (or any merged state), write the updated
@@ -902,6 +977,7 @@ final class AppViewModel {
         timerTask?.cancel()
         timerTask = nil
         stopCasualRebroadcastPump()
+        stopCasualRematchPoll()
         activeSession = nil
         activeSessionRecordID = nil
         sessionOverridePlayerID = nil
@@ -1168,6 +1244,20 @@ final class AppViewModel {
               let pid = sessionPlayerID else { return }
         let playerCount = session.players.count
         guard playerCount > 0 else { return }
+        let expectedIndex = state.activeTurnIndex
+        Task { [weak self] in
+            guard let self else { return }
+            guard await self.authorizeCasualTurnAdvance(expectedIndex: expectedIndex) else { return }
+            await MainActor.run { self._applyGTSTurnResult(actualTime: actualTime) }
+        }
+    }
+
+    private func _applyGTSTurnResult(actualTime: Double) {
+        guard let session = activeSession,
+              let state = session.guessTheSecondsState,
+              let pid = sessionPlayerID else { return }
+        let playerCount = session.players.count
+        guard playerCount > 0 else { return }
         let roundNumber = state.currentRoundNumber(playerCount: playerCount)
         let targetTime = state.roundTargets[roundNumber] ?? state.selectedTime
         let difference = ((abs(targetTime - actualTime) * 100).rounded()) / 100
@@ -1215,6 +1305,18 @@ final class AppViewModel {
     }
 
     func submitMemoryGridResult(elapsedSeconds: Double, moveCount: Int) {
+        guard let session = activeSession,
+              let state = session.memoryGridState,
+              let _ = sessionPlayerID else { return }
+        let expectedIndex = state.currentPlayerIndex
+        Task { [weak self] in
+            guard let self else { return }
+            guard await self.authorizeCasualTurnAdvance(expectedIndex: expectedIndex) else { return }
+            await MainActor.run { self._applyMemoryGridResult(elapsedSeconds: elapsedSeconds, moveCount: moveCount) }
+        }
+    }
+
+    private func _applyMemoryGridResult(elapsedSeconds: Double, moveCount: Int) {
         guard let session = activeSession,
               let state = session.memoryGridState,
               let pid = sessionPlayerID else { return }
@@ -1281,6 +1383,18 @@ final class AppViewModel {
     }
 
     func submitMemoryPathResult(progress: Int, attempts: Int, completionTime: Double?, isFinished: Bool, score: Int) {
+        guard let session = activeSession,
+              let state = session.memoryPathState,
+              let _ = sessionPlayerID else { return }
+        let expectedIndex = state.currentPlayerIndex
+        Task { [weak self] in
+            guard let self else { return }
+            guard await self.authorizeCasualTurnAdvance(expectedIndex: expectedIndex) else { return }
+            await MainActor.run { self._applyMemoryPathResult(progress: progress, attempts: attempts, completionTime: completionTime, isFinished: isFinished, score: score) }
+        }
+    }
+
+    private func _applyMemoryPathResult(progress: Int, attempts: Int, completionTime: Double?, isFinished: Bool, score: Int) {
         guard let session = activeSession,
               let state = session.memoryPathState,
               let pid = sessionPlayerID else { return }
@@ -1378,6 +1492,18 @@ final class AppViewModel {
     func submitTapInOrderResult(variant: String, elapsedSeconds: Double, correctCount: Int, totalTargets: Int, missTaps: Int, didFinish: Bool) {
         guard let session = activeSession,
               let state = session.tapInOrderState,
+              let _ = sessionPlayerID else { return }
+        let expectedIndex = state.currentPlayerIndex
+        Task { [weak self] in
+            guard let self else { return }
+            guard await self.authorizeCasualTurnAdvance(expectedIndex: expectedIndex) else { return }
+            await MainActor.run { self._applyTapInOrderResult(variant: variant, elapsedSeconds: elapsedSeconds, correctCount: correctCount, totalTargets: totalTargets, missTaps: missTaps, didFinish: didFinish) }
+        }
+    }
+
+    private func _applyTapInOrderResult(variant: String, elapsedSeconds: Double, correctCount: Int, totalTargets: Int, missTaps: Int, didFinish: Bool) {
+        guard let session = activeSession,
+              let state = session.tapInOrderState,
               let pid = sessionPlayerID else { return }
         let playerName = session.players.first(where: { $0.id == pid })?.username ?? "Player"
         let result = TIOPlayerResult(playerID: pid, playerName: playerName, variant: variant, elapsedSeconds: elapsedSeconds, correctCount: correctCount, totalTargets: totalTargets, missTaps: missTaps, didFinish: didFinish)
@@ -1411,6 +1537,18 @@ final class AppViewModel {
     }
 
     func submitColorTrapResult(hits: Int, fails: Int, survivalTime: Double, eliminated: Bool) {
+        guard let session = activeSession,
+              let state = session.colorTrapState,
+              let _ = sessionPlayerID else { return }
+        let expectedIndex = state.currentPlayerIndex
+        Task { [weak self] in
+            guard let self else { return }
+            guard await self.authorizeCasualTurnAdvance(expectedIndex: expectedIndex) else { return }
+            await MainActor.run { self._applyColorTrapResult(hits: hits, fails: fails, survivalTime: survivalTime, eliminated: eliminated) }
+        }
+    }
+
+    private func _applyColorTrapResult(hits: Int, fails: Int, survivalTime: Double, eliminated: Bool) {
         guard let session = activeSession,
               let state = session.colorTrapState,
               let pid = sessionPlayerID else { return }
