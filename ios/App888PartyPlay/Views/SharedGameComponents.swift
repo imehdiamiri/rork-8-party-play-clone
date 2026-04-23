@@ -241,100 +241,250 @@ struct MultiplayerResultActionsBar: View {
     let session: GameSession
     let onExit: () -> Void
 
+    @State private var showRematchReadyPrompt: Bool = false
+    @State private var didAutoPromptForThisRequest: Bool = false
+
+    private var me: UUID? { appModel.sessionPlayerID }
+
     private var isHost: Bool {
-        guard let pid = appModel.sessionPlayerID else { return false }
+        guard let pid = me else { return false }
         return session.players.first(where: { $0.id == pid })?.isHost ?? false
     }
 
     private var hasVoted: Bool { appModel.hasVotedRematch }
 
-    private var voters: [PlayerProfile] {
-        session.players.filter { session.rematchPlayerIDs.contains($0.id) }
+    private var hostPlayer: PlayerProfile? {
+        session.players.first(where: { $0.isHost })
     }
 
-    private var nonHostVoters: [PlayerProfile] {
-        voters.filter { !$0.isHost }
+    private var hostHasRequested: Bool {
+        guard let host = hostPlayer else { return false }
+        return session.rematchPlayerIDs.contains(host.id)
+    }
+
+    private var exitedIDs: Set<UUID> { appModel.sessionExitedPlayerIDs }
+    private var onlineIDs: Set<UUID> { appModel.sessionOnlinePlayerIDs }
+
+    private var exitedOpponents: [PlayerProfile] {
+        session.players.filter { $0.id != me && exitedIDs.contains($0.id) }
+    }
+
+    private var canRematch: Bool { exitedOpponents.isEmpty }
+
+    private var remainingOpponents: [PlayerProfile] {
+        session.players.filter { !$0.isHost && !exitedIDs.contains($0.id) }
+    }
+
+    private var readyOpponentsCount: Int {
+        let set = Set(session.rematchPlayerIDs)
+        return remainingOpponents.filter { set.contains($0.id) }.count
+    }
+
+    private func connectionStatus(for player: PlayerProfile) -> (color: Color, text: String, icon: String) {
+        if exitedIDs.contains(player.id) {
+            return (.red, "Exited", "rectangle.portrait.and.arrow.right")
+        }
+        if onlineIDs.isEmpty || onlineIDs.contains(player.id) {
+            return (.green, "Online", "dot.radiowaves.left.and.right")
+        }
+        return (.orange, "Reconnecting…", "wifi.exclamationmark")
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                Button {
-                    if isHost {
-                        appModel.startRematch()
-                    } else if !hasVoted {
-                        appModel.voteForRematch()
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.clockwise")
-                        Text(isHost ? "Rematch" : (hasVoted ? "Waiting for host…" : "Rematch"))
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        LinearGradient(colors: [.green, .mint], startPoint: .leading, endPoint: .trailing),
-                        in: .rect(cornerRadius: 14)
-                    )
-                    .foregroundStyle(.white)
-                }
-                .buttonStyle(.plain)
-                .disabled(!isHost && hasVoted)
+        VStack(spacing: 14) {
+            playerStatusCard
 
-                Button {
-                    onExit()
-                    Task { await appModel.exitActiveSession() }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                        Text("Exit").fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(.red.opacity(0.18), in: .rect(cornerRadius: 14))
-                    .foregroundStyle(.red)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 14).strokeBorder(.red.opacity(0.35))
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-
-            if isHost, !nonHostVoters.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Ready for rematch", systemImage: "checkmark.seal.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.green)
-                    ForEach(nonHostVoters) { p in
-                        HStack(spacing: 10) {
-                            Image(systemName: "person.fill")
-                                .foregroundStyle(.green)
-                            Text(p.username)
-                                .font(.subheadline.weight(.medium))
-                            Spacer()
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(.green.opacity(0.08), in: .rect(cornerRadius: 10))
-                    }
-                }
-                .padding(12)
-                .background(.white.opacity(0.04), in: .rect(cornerRadius: 14))
-            } else if !isHost, hasVoted {
-                HStack(spacing: 8) {
-                    ProgressView().scaleEffect(0.8)
-                    Text("Waiting for host to start rematch…")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(.white.opacity(0.04), in: .rect(cornerRadius: 12))
+            if !canRematch {
+                exitedBanner
+                exitButton
+            } else {
+                actionButtons
+                rematchProgressSection
             }
         }
         .padding(.horizontal, 16)
+        .onChange(of: hostHasRequested) { _, requested in
+            if requested, !isHost, !hasVoted, !didAutoPromptForThisRequest {
+                didAutoPromptForThisRequest = true
+                showRematchReadyPrompt = true
+            }
+            if !requested { didAutoPromptForThisRequest = false }
+        }
+        .alert("Rematch?", isPresented: $showRematchReadyPrompt) {
+            Button("Ready up") { appModel.voteForRematch() }
+            Button("Not now", role: .cancel) { }
+        } message: {
+            Text("The host wants a rematch. Ready up to start the next round.")
+        }
+    }
+
+    private var playerStatusCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Players", systemImage: "person.2.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            ForEach(session.players) { p in
+                let status = connectionStatus(for: p)
+                let isReadyForRematch = session.rematchPlayerIDs.contains(p.id)
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(status.color)
+                        .frame(width: 8, height: 8)
+                    Text(p.username)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                    if p.isHost {
+                        Text("Host")
+                            .font(.caption2.weight(.bold))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(.yellow.opacity(0.2), in: .capsule)
+                            .foregroundStyle(.yellow)
+                    }
+                    Spacer(minLength: 0)
+                    if exitedIDs.contains(p.id) {
+                        Label("Exited", systemImage: "rectangle.portrait.and.arrow.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.red)
+                    } else if isReadyForRematch {
+                        Label("Ready", systemImage: "checkmark.circle.fill")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.green)
+                    } else {
+                        Label(status.text, systemImage: status.icon)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(status.color)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.white.opacity(0.035), in: .rect(cornerRadius: 10))
+            }
+        }
+        .padding(12)
+        .background(.white.opacity(0.04), in: .rect(cornerRadius: 14))
+    }
+
+    private var exitedBanner: some View {
+        let names = exitedOpponents.map(\.username).joined(separator: ", ")
+        return HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "person.fill.xmark")
+                .foregroundStyle(.red)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(exitedOpponents.count > 1 ? "Players exited" : "Player exited")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.red)
+                Text("\(names) left the game. Rematch is no longer available.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(.red.opacity(0.08), in: .rect(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12).strokeBorder(.red.opacity(0.25))
+        }
+    }
+
+    private var exitButton: some View {
+        Button {
+            onExit()
+            Task { await appModel.exitActiveSession() }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                Text("Exit Room").fontWeight(.semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(.red.opacity(0.22), in: .rect(cornerRadius: 14))
+            .foregroundStyle(.red)
+            .overlay {
+                RoundedRectangle(cornerRadius: 14).strokeBorder(.red.opacity(0.4))
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            Button {
+                if !hasVoted { appModel.voteForRematch() }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: hasVoted ? "checkmark.circle.fill" : "arrow.clockwise")
+                    Text(rematchButtonTitle)
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    LinearGradient(colors: hasVoted ? [.green.opacity(0.5), .mint.opacity(0.5)] : [.green, .mint], startPoint: .leading, endPoint: .trailing),
+                    in: .rect(cornerRadius: 14)
+                )
+                .foregroundStyle(.white)
+            }
+            .buttonStyle(.plain)
+            .disabled(hasVoted)
+
+            Button {
+                onExit()
+                Task { await appModel.exitActiveSession() }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                    Text("Exit").fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(.red.opacity(0.18), in: .rect(cornerRadius: 14))
+                .foregroundStyle(.red)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14).strokeBorder(.red.opacity(0.35))
+                }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var rematchButtonTitle: String {
+        if isHost {
+            return hasVoted ? "Waiting for players…" : "Rematch"
+        }
+        if hasVoted { return "Ready…" }
+        if hostHasRequested { return "Ready up" }
+        return "Request Rematch"
+    }
+
+    @ViewBuilder
+    private var rematchProgressSection: some View {
+        if hasVoted || hostHasRequested {
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    ProgressView().scaleEffect(0.7)
+                    Text(progressText)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                if !remainingOpponents.isEmpty {
+                    ProgressView(value: Double(readyOpponentsCount), total: Double(remainingOpponents.count))
+                        .tint(.green)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
+            .background(.white.opacity(0.04), in: .rect(cornerRadius: 12))
+        }
+    }
+
+    private var progressText: String {
+        if isHost {
+            return "Waiting for players to ready up • \(readyOpponentsCount)/\(remainingOpponents.count)"
+        }
+        if hasVoted {
+            return "Waiting for other players… \(readyOpponentsCount)/\(remainingOpponents.count)"
+        }
+        return "Host wants a rematch • tap Ready up to join"
     }
 }

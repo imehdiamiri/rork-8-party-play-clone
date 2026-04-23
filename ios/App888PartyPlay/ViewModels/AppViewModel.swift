@@ -81,6 +81,8 @@ final class AppViewModel {
     var sessionOverridePlayerID: UUID?
 
     var connectionState: SessionResilienceService.ConnectionState = .connected
+    var sessionOnlinePlayerIDs: Set<UUID> = []
+    var sessionExitedPlayerIDs: Set<UUID> = []
     var showHostLeftAlert: Bool = false
     var showRejoinPrompt: Bool = false
     var pendingRejoinSessionID: UUID?
@@ -845,7 +847,8 @@ final class AppViewModel {
         guard let service = casualRoomService, let roomID = casualSessionRoomID else { return }
         casualRematchPollTask = Task { [weak self] in
             while !Task.isCancelled {
-                let ids = await service.fetchRematchReadyPlayerIDs(roomID: roomID)
+                let readyIDs = await service.fetchRematchReadyPlayerIDs(roomID: roomID)
+                let roomSnapshot: (CasualRoomRecord, [CasualRoomPlayerRecord])? = try? await service.fetchRoomFromDB(roomID: roomID)
                 await MainActor.run {
                     guard let self else { return }
                     guard let session = self.activeSession, session.phase == .finished else {
@@ -853,14 +856,42 @@ final class AppViewModel {
                         self.casualRematchPollTask = nil
                         return
                     }
-                    let merged = Array(Set(session.rematchPlayerIDs).union(ids))
+                    let merged = Array(Set(session.rematchPlayerIDs).union(readyIDs))
                     if Set(merged) != Set(session.rematchPlayerIDs) {
                         self.updateSession(copying: session, rematchPlayerIDs: merged)
                     }
+                    if let records = roomSnapshot?.1 {
+                        let onlineIDs = Set(records.filter(\.isConnected).map(\.guestPlayerId))
+                        let presentIDs = Set(records.map(\.guestPlayerId))
+                        self.sessionOnlinePlayerIDs = onlineIDs
+                        let sessionPlayerIDs = Set(session.players.map(\.id))
+                        self.sessionExitedPlayerIDs = sessionPlayerIDs.subtracting(presentIDs)
+                    }
+                    self.autoStartRematchIfReady()
                 }
                 try? await Task.sleep(for: .milliseconds(1500))
             }
         }
+    }
+
+    /// Host-side: if host has voted and every remaining connected non-host player
+    /// is ready, automatically start the rematch so the host doesn't need to tap twice.
+    private func autoStartRematchIfReady() {
+        guard let session = activeSession, session.phase == .finished else { return }
+        guard isCurrentUserHost, !isStartingRematch else { return }
+        guard let pid = sessionPlayerID, session.rematchPlayerIDs.contains(pid) else { return }
+        let opponents = session.players.filter { !$0.isHost }
+        let remaining = opponents.filter { !sessionExitedPlayerIDs.contains($0.id) }
+        guard !remaining.isEmpty else { return }
+        let readySet = Set(session.rematchPlayerIDs)
+        let allReady = remaining.allSatisfy { readySet.contains($0.id) }
+        if allReady { startRematch() }
+    }
+
+    /// True when any opponent (non-self session player) has left the room entirely.
+    var hasExitedOpponent: Bool {
+        guard let session = activeSession, let me = sessionPlayerID else { return false }
+        return session.players.contains { $0.id != me && sessionExitedPlayerIDs.contains($0.id) }
     }
 
     func stopCasualRematchPoll() {
@@ -899,6 +930,7 @@ final class AppViewModel {
         guard isCurrentUserHost else { return }
         guard session.mode == .multiDevice || session.mode == .teamMode else { return }
         isStartingRematch = true
+        sessionExitedPlayerIDs = []
         MultiplayerTelemetry.shared.log(event: "rematch_started", source: "host", success: true)
         MultiplayerTelemetry.shared.markSessionStarted()
         // Clear backend rematch flags and reset authoritative turn counter for
@@ -1080,6 +1112,8 @@ final class AppViewModel {
         currentStateVersion = 0
         lastAppliedRemoteVersion = 0
         isStartingRematch = false
+        sessionOnlinePlayerIDs = []
+        sessionExitedPlayerIDs = []
         detachCasualRoomService()
         resilienceService.clearActiveSession()
     }
