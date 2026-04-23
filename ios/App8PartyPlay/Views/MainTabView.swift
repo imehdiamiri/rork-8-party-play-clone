@@ -208,7 +208,7 @@ struct HomeView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
-            Text("888partyplay")
+            Text("8PartyPlay")
                 .viralTitleStyle(size: 20, weight: .black)
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -814,7 +814,7 @@ struct FriendsView: View {
                                 Spacer(minLength: 0)
                             }
                             .padding(.vertical, 4)
-                            ShareLink(item: "Let\u{2019}s play 8PartyPlay together! Download: https://www.888partyplay.com") {
+                            ShareLink(item: "Let\u{2019}s play 8PartyPlay together! Download: https://www.8partyplay.com") {
                                 HStack(spacing: 6) {
                                     Image(systemName: "square.and.arrow.up")
                                         .font(.caption2.weight(.semibold))
@@ -1242,7 +1242,7 @@ struct WalletView: View {
                 SectionHeaderView(title: "How You Earn Stars", subtitle: "Stars cannot be farmed from normal gameplay.")
                 sourceRow(icon: "gift.fill", tint: .pink, title: "Sign-up Bonus", detail: "+100 ★ when you create an account")
                 sourceRow(icon: "sun.max.fill", tint: .green, title: "Daily Reward", detail: "+10 ★ every day")
-                sourceRow(icon: "crown.fill", tint: .indigo, title: "888partyplay+", detail: "AI cards cost just 1 ★ instead of 5")
+                sourceRow(icon: "crown.fill", tint: .indigo, title: "8PartyPlay+", detail: "AI cards cost just 1 ★ instead of 5")
             }
         }
     }

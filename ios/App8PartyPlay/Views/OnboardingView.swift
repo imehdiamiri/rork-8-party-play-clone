@@ -73,7 +73,7 @@ struct OnboardingView: View {
                     .font(.title2.weight(.medium))
                     .foregroundStyle(.secondary)
 
-                Text("888partyplay")
+                Text("8PartyPlay")
                     .viralTitleStyle(size: 38, weight: .black)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)

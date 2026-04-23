@@ -48,7 +48,7 @@ struct AuthView: View {
                                 .frame(width: 72, height: 72)
                                 .background(.blue.opacity(0.14), in: .rect(cornerRadius: 22))
 
-                            Text("888partyplay")
+                            Text("8PartyPlay")
                                 .viralTitleStyle(size: 32, weight: .black)
 
                             Text("Sign in to claim 100 \u{2605},\nfriends, and AI cards.")

@@ -53,7 +53,7 @@ npm run dev
 2. In Vercel: New Project → import the repo → **Root directory: `admin`**.
 3. Add the env vars above in Project Settings → Environment Variables.
 4. Deploy.
-5. Add custom domain **admin.888partyplay.com** in Vercel → Domains, and add a CNAME record pointing to `cname.vercel-dns.com` in your DNS.
+5. Add custom domain **admin.8partyplay.com** in Vercel → Domains, and add a CNAME record pointing to `cname.vercel-dns.com` in your DNS.
 
 ## 5. Access control
 

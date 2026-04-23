@@ -92,7 +92,7 @@ struct InviteURLMatchingTests {
     }
 
     @Test func acceptsValidHost() {
-        #expect(extract("https://www.888partyplay.com/invite?code=ABC123") == "ABC123")
+        #expect(extract("https://www.8partyplay.com/invite?code=ABC123") == "ABC123")
     }
 
     @Test func acceptsCustomScheme() {
@@ -100,11 +100,11 @@ struct InviteURLMatchingTests {
     }
 
     @Test func rejectsPhishingHost() {
-        #expect(extract("https://888play.evil.com/invite?code=BAD") == nil)
-        #expect(extract("https://888playfake.com/invite?code=BAD") == nil)
+        #expect(extract("https://8partyplay.evil.com/invite?code=BAD") == nil)
+        #expect(extract("https://8partyplayfake.com/invite?code=BAD") == nil)
     }
 
     @Test func rejectsWrongPath() {
-        #expect(extract("https://www.888partyplay.com/notinvite?code=X") == nil)
+        #expect(extract("https://www.8partyplay.com/notinvite?code=X") == nil)
     }
 }

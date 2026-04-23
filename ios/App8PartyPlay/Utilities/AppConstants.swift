@@ -8,16 +8,16 @@ nonisolated enum AppConstants {
     }
 
     enum URLs {
-        static let privacyPolicy: URL = URL(string: "https://www.888partyplay.com/privacy.html")!
-        static let termsOfService: URL = URL(string: "https://www.888partyplay.com/terms.html")!
-        static let marketingSite: URL = URL(string: "https://www.888partyplay.com")!
+        static let privacyPolicy: URL = URL(string: "https://www.8partyplay.com/privacy.html")!
+        static let termsOfService: URL = URL(string: "https://www.8partyplay.com/terms.html")!
+        static let marketingSite: URL = URL(string: "https://www.8partyplay.com")!
     }
 
     enum Invite {
         static let allowedHosts: Set<String> = [
-            "888partyplay.com",
-            "www.888partyplay.com",
-            "app.888partyplay.com"
+            "8partyplay.com",
+            "www.8partyplay.com",
+            "app.8partyplay.com"
         ]
         static let inviteScheme: String = "invite"
     }

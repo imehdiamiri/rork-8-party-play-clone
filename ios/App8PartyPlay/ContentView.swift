@@ -120,7 +120,7 @@ struct SplashView: View {
                     .scaleEffect(appeared ? 1 : 0.7)
                     .opacity(appeared ? 1 : 0)
 
-                Text("888partyplay")
+                Text("8PartyPlay")
                     .viralTitleStyle(size: 36, weight: .black)
                     .foregroundStyle(.white)
                     .opacity(appeared ? 1 : 0)

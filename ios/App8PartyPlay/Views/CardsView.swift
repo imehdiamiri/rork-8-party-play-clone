@@ -841,7 +841,7 @@ struct CardsDeckView: View {
                     HStack(spacing: 5) {
                         Image(systemName: category.icon)
                             .font(.system(size: 10, weight: .black))
-                        Text("888partyplay")
+                        Text("8PartyPlay")
                             .viralTitleStyle(size: 11, weight: .heavy)
                             .tracking(0.5)
                     }
