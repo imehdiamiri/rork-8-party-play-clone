@@ -326,8 +326,18 @@ struct HomeView: View {
     }
 
     private var filteredGames: [GameDefinition] {
-        guard let mode = selectedModeFilter else { return appModel.games }
-        return appModel.games.filter { $0.id.supportedModes.contains(mode) }
+        let base: [GameDefinition]
+        if let mode = selectedModeFilter {
+            base = appModel.games.filter { $0.id.supportedModes.contains(mode) }
+        } else {
+            base = appModel.games
+        }
+        return base.sorted { lhs, rhs in
+            let lhsLocked = !appModel.canPlayGame(lhs.id)
+            let rhsLocked = !appModel.canPlayGame(rhs.id)
+            if lhsLocked == rhsLocked { return false }
+            return !lhsLocked && rhsLocked
+        }
     }
 
     private var gamesSection: some View {
@@ -338,7 +348,7 @@ struct HomeView: View {
                         SoundManager.shared.playNavigation()
                         path.append(.game(game.id))
                     } label: {
-                        GameCardView(game: game)
+                        GameCardView(game: game, isLocked: !appModel.canPlayGame(game.id))
                     }
                     .buttonStyle(CardPressStyle())
                     .slideUpOnAppear(delay: Double(index) * 0.06)
@@ -404,6 +414,7 @@ struct QuickJoinSheet: View {
 
 struct GameCardView: View {
     let game: GameDefinition
+    var isLocked: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -463,6 +474,17 @@ struct GameCardView: View {
         .overlay {
             RoundedRectangle(cornerRadius: 18)
                 .strokeBorder(accentColor.opacity(0.25), lineWidth: 1)
+        }
+        .overlay(alignment: .topTrailing) {
+            if isLocked {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 13, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .padding(7)
+                    .background(.black.opacity(0.35), in: .circle)
+                    .overlay { Circle().strokeBorder(.white.opacity(0.35), lineWidth: 1) }
+                    .padding(10)
+            }
         }
     }
 

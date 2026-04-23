@@ -200,20 +200,15 @@ struct CoinFlipToolView: View {
             let goldDeep = Color(red: 0.45, green: 0.27, blue: 0.02)
             let goldMid = Color(red: 0.82, green: 0.56, blue: 0.08)
 
-            AsyncImage(url: URL(string: "https://r2-pub.rork.com/generated-images/5ed19d54-708a-4c39-bd70-944d23883fc4.png")) { phase in
+            let faceURL = isHeads
+                ? "https://r2-pub.rork.com/generated-images/5ed19d54-708a-4c39-bd70-944d23883fc4.png"
+                : "https://r2-pub.rork.com/generated-images/592738ac-9267-4db2-99e0-714050751883.png"
+            AsyncImage(url: URL(string: faceURL)) { phase in
                 if let image = phase.image {
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .scaleEffect(x: isHeads ? 1 : -1, y: 1)
                         .frame(width: size, height: size)
-                        .overlay(alignment: .bottom) {
-                            Text(isHeads ? "HEADS" : "TAILS")
-                                .font(.system(size: size * 0.09, weight: .black, design: .rounded))
-                                .foregroundStyle(goldDeep)
-                                .shadow(color: goldLight.opacity(0.6), radius: 0.5, y: 0.5)
-                                .padding(.bottom, size * 0.08)
-                        }
                         .shadow(color: .black.opacity(0.4), radius: 10, y: 6)
                 } else {
                     fallbackCoinFace(isHeads: isHeads, size: size, gold: gold, goldLight: goldLight, goldDeep: goldDeep, goldMid: goldMid)
