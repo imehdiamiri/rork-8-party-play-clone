@@ -1,28 +1,33 @@
 # 8PartyPlay — Rebuild Prompt Index
 
-Complete specification for rebuilding 8PartyPlay from scratch. Read all files together.
+Complete specification for rebuilding 8PartyPlay from scratch. Read every file in the order below.
 
 **Stack:** Swift + SwiftUI · iOS 18+ · Dark mode only · Firebase backend · RevenueCat monetization
 
 ---
 
-## Reading Order
+## Reading / Build Order
 
-Start with `PROMPT.md` for the big picture, then read each domain file before building that part.
+Read files in numeric order. Each step builds on the previous one.
 
-| File | What it covers | Read when |
+| # | File | What it covers |
 |---|---|---|
-| `PROMPT.md` | Full app overview, game list, Firestore schema, architecture, deliverables | First — always |
-| `DESIGN_SYSTEM_PROMPT.md` | Colors, typography, components, animations, sounds, haptics | Before writing any UI |
-| `FIREBASE_SETUP_PROMPT.md` | Firebase config, Firestore rules, Cloud Functions TypeScript source, RevenueCat | Before any backend work |
-| `ONBOARDING_AUTH_PROMPT.md` | Splash, onboarding slides, auth screen, email/password, Google, Apple, Guest | Before auth screens |
-| `GAMES_DETAILED_PROMPT.md` | Every game — every screen, button, timer, phase, animation, scoring rule | Before building any game |
-| `GAMES_PROMPT.md` | Games summary overview (shorter version) | Quick reference |
-| `MULTI_DEVICE_PROMPT.md` | Realtime rooms, lobbies, sync, reconnection, host migration | Before multiplayer features |
-| `TOOLS_CARDS_DETAILED_PROMPT.md` | Dice, Bottle, Hourglass, Coin, Team Splitter + card deck library + all card content | Before Tools tab |
-| `FACTORY_TAB_PROMPT.md` | AI game idea generator + AI card pack generator | Before Factory tab |
-| `APP_EVERYTHING_ELSE_PROMPT.md` | Navigation shell, Friends tab, Profile sheet, Wallet, subscriptions, paywall | Before app shell |
-| `NOTIFICATIONS_DEEPLINKS_PROMPT.md` | FCM push notifications, local notifications, deep links, universal links | Before notifications/links |
+| 01 | `01_PROMPT.md` | Full app overview, game list, architecture, deliverables. **Read first, always.** |
+| 02 | `02_DESIGN_SYSTEM_PROMPT.md` | Colors, typography, components, animations, materials |
+| 03 | `03_FIREBASE_SETUP_PROMPT.md` | Firebase config, Firestore rules, Cloud Functions, Auth, Storage, RevenueCat |
+| 04 | `04_ONBOARDING_AUTH_PROMPT.md` | Splash, onboarding slides, auth screen (Apple / Google / Email / Guest) |
+| 05 | `05_APP_SHELL_PROMPT.md` | Navigation shell, Friends tab, Profile sheet, Wallet, subscriptions, paywall |
+| 06 | `06_MULTI_DEVICE_PROMPT.md` | Realtime rooms, lobbies, sync, reconnection, host migration |
+| 07 | `07_GAMES_OVERVIEW_PROMPT.md` | Summary of all 11 games (quick reference) |
+| 08 | `08_GAMES_DETAILED_PROMPT.md` | Every game — every screen, button, timer, phase, scoring rule |
+| 09 | `09_TOOLS_CARDS_DETAILED_PROMPT.md` | Dice, Bottle, Hourglass, Coin, Team Splitter + card deck library |
+| 10 | `10_FACTORY_TAB_PROMPT.md` | AI game idea generator + AI card pack generator |
+| 11 | `11_NOTIFICATIONS_DEEPLINKS_PROMPT.md` | FCM push, local notifications, deep links, universal links |
+| 12 | `12_ASSETS_AND_SOUNDS_PROMPT.md` | Images, app icon, launch screen, SFX, music, haptics inventory |
+| 13 | `13_ANALYTICS_AND_REMOTE_CONFIG_PROMPT.md` | Firebase Analytics events, Crashlytics, Remote Config keys, App Check |
+| 14 | `14_LOCALIZATION_ACCESSIBILITY_PROMPT.md` | Strings catalog, Dynamic Type, VoiceOver, Reduce Motion, contrast |
+| 15 | `15_TESTING_AND_QA_PROMPT.md` | Unit + UI tests, manual QA, performance budgets, CI gates |
+| 16 | `16_APP_STORE_SUBMISSION_PROMPT.md` | Bundle config, Info keys, metadata, IAPs, privacy label, review notes |
 
 ---
 
@@ -30,11 +35,12 @@ Start with `PROMPT.md` for the big picture, then read each domain file before bu
 
 - **NO XP.** Do not implement XP, levels, level-up animations, or per-game level progress. Only track: `matchesPlayed`, `wins`, `stars`.
 - **Dark mode only.** `preferredColorScheme(.dark)` at the root. No light variant.
-- **Firebase only.** No Supabase. Backend is Firebase (Auth + Firestore + Functions + Storage + FCM).
+- **Firebase only.** No Supabase. Backend is Firebase (Auth + Firestore + RTDB + Functions + Storage + FCM + Remote Config + App Check).
 - **RevenueCat** for all in-app purchases (subscriptions + star packs).
 - **iOS 18+** minimum. Use `@available(iOS 26.0, *)` guards for Liquid Glass.
 - **MVVM with `@Observable`** — not `ObservableObject`.
 - **Strict concurrency** — Codable structs and data types must be `nonisolated`.
+- **Don't choose the tech stack** unless told — the AI builder picks frameworks itself, except for the decisions already locked above (Firebase, RevenueCat, SwiftUI, MVVM).
 
 ---
 
@@ -46,6 +52,8 @@ Start with `PROMPT.md` for the big picture, then read each domain file before bu
 | Coin Heads | `5bi465cwzmc67jtcmnxco.png` | Coin Flip tool — heads face |
 | Coin Tails | `sq46dl6bh1k6olsges2hi.png` | Coin Flip tool — tails face |
 | Bottle | Transparent PNG (vertical beer bottle, cap up) | Truth & Dare game + Bottle Spinner tool |
+
+Full asset + audio + haptics inventory: see `12_ASSETS_AND_SOUNDS_PROMPT.md`.
 
 ---
 
@@ -72,66 +80,34 @@ Start with `PROMPT.md` for the big picture, then read each domain file before bu
 - [ ] Team Splitter (N teams, shuffle animation)
 
 ### Card Decks
-- [ ] Act (pantomime, dare, funny action)
-- [ ] Talk (starters, personal, discussion, truth, explain/guess, icebreaker)
-- [ ] Challenges (speech, behavior, time limit)
-- [ ] Penalty (funny, embarrassing, group choice)
-- [ ] Couple (questions, dynamics, playful)
-- [ ] Swipeable card stack UI
-- [ ] Save / share / skip
-- [ ] Locked deck paywall
+- [ ] Act · Talk · Challenges · Penalty · Couple
+- [ ] Swipeable stack UI, save / share / skip, locked deck paywall
 
 ### Factory Tab
-- [ ] Game Idea Generator (vibe + player count + notes → AI idea)
-- [ ] Card Pack Generator (category + subtype + vibe + audience → AI cards)
-- [ ] Daily quota system (3 free/day, unlimited for Pro)
-- [ ] Save / share generated content
+- [ ] Game Idea Generator, Card Pack Generator
+- [ ] Daily quota (3 free / unlimited Pro)
 
 ### Friends & Social
-- [ ] Offline friends list (CRUD, "Me" pinned)
-- [ ] Online friends (search, request, accept/decline)
-- [ ] Room invites via push notification
-- [ ] Public rooms browser
+- [ ] Offline friends, Online friends, Room invites, Public rooms browser
 
 ### Multiplayer
-- [ ] Create room (game, mode, access type)
-- [ ] Join by code / invite / public rooms
-- [ ] Lobby (player list, ready state, host controls)
-- [ ] Real-time game state sync
-- [ ] Reconnection + session resilience
-- [ ] Host migration
-- [ ] Rematch flow
+- [ ] Create / join (code, invite, public), Lobby, Sync, Reconnect, Host migration, Rematch
 
 ### Economy
-- [ ] Star balance display
-- [ ] Daily reward claim
-- [ ] Star pack purchases (StoreKit via RevenueCat)
-- [ ] Subscription (monthly + yearly via RevenueCat)
-- [ ] Transaction history
-- [ ] Invite reward (+30⭐)
+- [ ] Star balance, Daily reward, Star packs, Subscription, Transactions, Invite reward
 
 ### Auth & Profile
-- [ ] Sign in with Apple
-- [ ] Sign in with Google
-- [ ] Email/password auth
-- [ ] Guest mode
-- [ ] Profile photo (Firebase Storage)
-- [ ] Change username
-- [ ] Delete account (App Store required)
-- [ ] Restore purchases
+- [ ] Apple, Google, Email, Guest, Photo, Username, Delete account, Restore purchases
 
 ### Notifications & Links
-- [ ] FCM device token storage
-- [ ] Push: friend request, invite, room starting, daily reward
-- [ ] Local: hourglass end, turn reminder
-- [ ] Deep link: `partyplay://invite?code=`, `partyplay://room/CODE`
-- [ ] Universal links: `8partyplay.com/invite?code=`
+- [ ] FCM tokens, Push events, Local notifications, `partyplay://` scheme, Universal links
 
 ### App Shell
-- [ ] 4-tab navigation (Games, Tools, Friends, Factory)
-- [ ] Profile floating button on every root tab
-- [ ] Connection banner (reconnecting/disconnected)
-- [ ] Global toast overlay
-- [ ] iOS 26 Liquid Glass with iOS 18 fallback
-- [ ] Paywall screen
-- [ ] Privacy Policy + Terms of Service (in-app web view)
+- [ ] 4-tab nav, floating Profile, connection banner, global toast, paywall, legal web views
+
+### Non-Functional
+- [ ] Assets + sounds + haptics (file 12)
+- [ ] Analytics + Remote Config + App Check (file 13)
+- [ ] Localization + Accessibility (file 14)
+- [ ] Unit + UI tests + manual QA (file 15)
+- [ ] App Store submission ready (file 16)
