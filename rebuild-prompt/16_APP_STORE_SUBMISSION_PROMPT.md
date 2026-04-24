@@ -1,6 +1,6 @@
-# 16 — App Store Submission
+# 16 — Submission & Deployment (App Store + Google Play + Web)
 
-Everything required to publish 8PartyPlay on the App Store.
+Everything required to publish 8PartyPlay on the **App Store** (iOS), **Google Play** (Android), and **Vercel** (Web). iOS is covered first; Android and Web follow in sections 11 and 12.
 
 ---
 
@@ -147,3 +147,110 @@ Follow the `app-store-publish` skill to:
 3. Run preflight.
 4. Archive and upload via `asc` CLI.
 5. Submit to TestFlight internal → external → App Store review.
+
+---
+
+## 11. Google Play Submission (Android)
+
+### Package & identifiers
+- **Application ID:** `com.eightpartyplay.app`
+- **Version name:** semver (matches iOS)
+- **Version code:** monotonic integer
+- **Min SDK:** 29 · **Target SDK:** 34+
+- Signing: Play App Signing enabled; upload key stored in CI secret (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`).
+
+### Manifest permissions (declare + justify)
+- `INTERNET`, `POST_NOTIFICATIONS`, `VIBRATE`, `RECORD_AUDIO` (Reverse Singing), `READ_MEDIA_IMAGES` (avatar).
+
+### Play Console setup
+- **App category:** Games → Party.
+- **Content rating:** IARC questionnaire — Teen (mild suggestive themes from Truth & Dare).
+- **Target audience:** 13+.
+- **Data Safety form:** mirror the iOS privacy label. Declare email, username, avatar, user-generated content, purchase history, analytics, crash logs. No tracking, no ads SDK, no IDFA-equivalent.
+- **Privacy Policy URL:** `https://8partyplay.app/privacy`
+- **Account deletion URL:** `https://8partyplay.app/delete-account` (visible on Google Play product page — required).
+
+### Store listing
+- **Short description** (80 chars), **Full description** (4000 chars) — generated via `app-store-metadata` skill then adapted for Play.
+- **Feature graphic** 1024×500 PNG.
+- **App icon** 512×512 (from `h03kekxe8ymunf0mls4b3.png`).
+- **Phone screenshots** (min 2, recommended 8) at 1080×1920 or larger.
+- **7"/10" tablet screenshots** optional but recommended for higher placement.
+- **Promo video** optional (YouTube URL).
+
+### Deep links & App Links
+- Intent-filter `https://8partyplay.app/r/*` and `/invite` with `android:autoVerify="true"`.
+- Host `/.well-known/assetlinks.json` on the web domain with the SHA-256 of the Play App Signing key.
+- Custom scheme `partyplay://*` for internal + Stripe return.
+
+### Payments (Stripe — not Google Play Billing)
+- Since Stripe is used for digital subscriptions, follow Google's **User Choice Billing** program if available in the target markets; otherwise, default to Google Play Billing for the Play Store build and keep Stripe only on the sideloaded/web builds. Pick one path per release.
+- If using Stripe: add clear disclosure on the paywall ("Billed by Stripe") and ensure pricing is displayed before purchase.
+- If using Play Billing: mirror the Stripe price catalog with Google Play products (`pro_monthly`, `pro_yearly`, `star_100`, `star_500`, `star_1200`) and wire RevenueCat's Android SDK with `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` — entitlements still converge via `revenueCatWebhook`.
+- Document the chosen path in the Play Console review notes.
+
+### Firebase setup
+- Register Android app in Firebase, download `google-services.json` → `android/app/`.
+- Enable **Play Integrity** App Check provider.
+- Upload FCM server key / or use the default OAuth-based send.
+
+### Pre-flight (every upload)
+- [ ] All permissions justified in Play Console.
+- [ ] No debug logs / `Log.d` in release.
+- [ ] ProGuard/R8 rules keep Firebase + Stripe classes.
+- [ ] `google-services.json` points to the **release** Firebase app.
+- [ ] Play Integrity configured.
+- [ ] Signed AAB uploaded to Internal testing track first.
+- [ ] Crashlytics + mapping file upload configured.
+
+### Release flow
+1. Internal testing → Closed testing (20+ testers for 14 days) → Production.
+2. Staged rollout 10% → 50% → 100%.
+
+---
+
+## 12. Web Deployment (Vercel)
+
+### Domain
+- Primary: `8partyplay.app`
+- Redirects: `8partyplay.com`, `www.8partyplay.app`
+
+### Vercel project
+- Root directory: `website/`
+- Framework preset: Next.js
+- Node runtime for Stripe webhook; Edge runtime for marketing pages.
+- Environment variables (see `18_WEB_APP_PROMPT.md` section 12) set for Production and Preview.
+
+### Build & performance budgets
+- Lighthouse mobile ≥ 95 for `/`, `/privacy`, `/terms`.
+- LCP < 2.5s, CLS < 0.05, TBT < 200ms on marketing pages.
+- Image optimization via `next/image`; preload hero logo.
+
+### Stripe webhook
+- Register `https://8partyplay.app/api/stripe/webhook` **or** the Firebase Cloud Function URL `https://<region>-<project>.cloudfunctions.net/stripeWebhook` in the Stripe Dashboard.
+- Set `STRIPE_WEBHOOK_SECRET` in Vercel + Firebase Functions config.
+
+### PWA
+- `app/manifest.ts` exposed at `/manifest.webmanifest`.
+- `public/sw.js` precaches shell + tool assets; stale-while-revalidate for card JSON.
+- `public/firebase-messaging-sw.js` registered for FCM web push.
+
+### SEO & legal
+- `/privacy`, `/terms`, `/support`, `/delete-account` live, linked from footer + App Store / Play Console.
+- `sitemap.xml` + `robots.txt` via Next.js metadata routes.
+- OG image + Twitter card per page.
+- Cookie consent banner (GDPR/CCPA) — analytics gated until consent.
+
+### Pre-flight (every deploy)
+- [ ] All env vars present (Firebase public, Stripe publishable + prices, reCAPTCHA site key).
+- [ ] Server env vars present (Firebase admin, Stripe secret + webhook secret).
+- [ ] `NEXT_PUBLIC_APP_URL` matches the deployed domain.
+- [ ] Stripe webhook signing verified via `stripe listen --forward-to ...` smoke test on staging.
+- [ ] `/.well-known/assetlinks.json` (Android) and `/.well-known/apple-app-site-association` (iOS) hosted and valid.
+- [ ] Lighthouse budgets met.
+- [ ] Analytics consent banner working; no cookies before consent.
+
+### Release flow
+1. Push to `main` → Vercel auto-deploys Production.
+2. Feature branches → Preview URLs used for QA.
+3. After deploy, run Playwright smoke pack against Production.

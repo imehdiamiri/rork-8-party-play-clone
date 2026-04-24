@@ -2,6 +2,13 @@
 
 This document covers the complete Firebase project configuration, Firestore security rules, and Cloud Functions TypeScript source for 8PartyPlay.
 
+**One Firebase project powers all three clients** (iOS, Android, Web). Register three apps inside the same project:
+- iOS app → `GoogleService-Info.plist` → Xcode target
+- Android app → `google-services.json` → `android/app/`
+- Web app → Firebase config object → `website/.env.local` as `NEXT_PUBLIC_FIREBASE_*`
+
+Stripe payment flows are implemented as Cloud Functions (`stripeWebhook`, `createStripeCheckoutSession`, `createStripePortalSession`) — see `19_STRIPE_PAYMENTS_PROMPT.md` for the full source.
+
 ---
 
 ## 1. Firebase Project Configuration
@@ -23,6 +30,21 @@ This document covers the complete Firebase project configuration, Firestore secu
 3. Enable **Sign in with Apple** capability in Xcode + entitlements.
 4. Register APNs certificates/keys in Firebase Console → Cloud Messaging.
 5. Add `PrivacyInfo.xcprivacy` with required reason API entries (see App Store requirements).
+
+### Android setup
+1. Add Android app to the Firebase project with package `com.eightpartyplay.app`.
+2. Register SHA-1 + SHA-256 debug and release certificates (Play App Signing + upload key).
+3. Download `google-services.json` → `android/app/`.
+4. Apply the `com.google.gms.google-services` Gradle plugin.
+5. Install Play Integrity App Check provider at app startup.
+6. Register the FCM sender; verify POST_NOTIFICATIONS runtime permission on Android 13+.
+
+### Web setup
+1. Register a Web app in the Firebase project. Copy the config object into `NEXT_PUBLIC_FIREBASE_*` env vars (see `18_WEB_APP_PROMPT.md`).
+2. Enable reCAPTCHA v3 site key for App Check (Web).
+3. Add `https://8partyplay.app` to Authentication → Authorized domains.
+4. Generate a VAPID key for FCM Web Push → `NEXT_PUBLIC_FIREBASE_VAPID_KEY`.
+5. Host `firebase-messaging-sw.js` at `/firebase-messaging-sw.js` for web push.
 
 ### SPM packages to install
 ```
