@@ -6,8 +6,12 @@ Use this alongside the other prompts:
 - `PROMPT.md` — the whole app overview.
 - `MULTI_DEVICE_PROMPT.md` — realtime rooms & multi-device sync.
 - `APP_EVERYTHING_ELSE_PROMPT.md` — tools, wallet, friends, AI generator, etc.
+- `DESIGN_SYSTEM_PROMPT.md` — full design system.
+- `FIREBASE_SETUP_PROMPT.md` — Firebase config and Cloud Functions.
 
-Pick any tech stack you want. We already use SwiftUI + Supabase, but the AI can use Firebase or anything else. Do **not** add an XP system — XP is completely removed from the app.
+**Stack:** Swift + SwiftUI (iOS 18+), Firebase backend (Firestore, Auth, Functions, Storage, FCM).
+
+**NO XP system.** Do not implement XP, levels, level curves, or level-up animations anywhere in the app. Track only: `matchesPlayed`, `wins`, `stars`.
 
 ---
 

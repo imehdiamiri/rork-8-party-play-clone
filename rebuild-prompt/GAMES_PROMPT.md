@@ -1,13 +1,16 @@
-# 8PartyPlay — Games Build Prompt
+# 8PartyPlay — Games Build Prompt (Summary)
 
-Build an iOS party-games app called **8PartyPlay**. This document describes every game in detail. The app also has tools, cards, an AI generator, friends, wallet, a multi-device system, and more — those are covered in separate prompts. Pick whatever tech stack you think fits best.
+> **This is a summary.** For the full exhaustive spec of every game (every screen, button, timer, phase, animation, scoring rule) use `GAMES_DETAILED_PROMPT.md`.
+
+This document gives an overview of all 11 games. The app also has tools, cards, an AI generator, friends, wallet, and a multi-device system — covered in the other prompt files. **Stack: Swift + SwiftUI, Firebase backend.**
 
 ## Global Game Rules
 
-- All games are offline-first. Each game has setup → play → result → optional rematch.
-- Most games support three modes (pick per game, see below):
+- All games are offline-first for single-device mode. Each game follows: setup → play → result → optional rematch.
+- **NO XP system.** Do not implement XP, levels, or level-up animations. Track only `matchesPlayed`, `wins`, and `stars`.
+- Three possible modes (per game, see below):
   - **Single Device (1 Phone):** everyone plays on one phone, passing it around.
-  - **Multi Device (Multi Phone):** each player uses their own phone, rooms sync in realtime.
+  - **Multi Device (Multi Phone):** each player uses their own phone, synced via Firestore realtime.
   - **Team Mode:** players split into 2 teams that compete.
 - Setup screens share common building blocks: player count stepper, player name list (fillable from friends), duplicate-name validation, How-To-Play button, and a Start button disabled until valid.
 - Every game shows a results screen with a leaderboard, plays a short celebration, and offers "Play Again" / "Back to Home".
