@@ -2,6 +2,11 @@
 
 This document specifies every reusable component, color, typography rule, animation, and layout pattern in the 8PartyPlay design system. Implement all of these in `DesignSystem.swift` and companion files before building any screen.
 
+> **Companion files (read together):**
+> - `02A_RESPONSIVE_AND_FONTS_PROMPT.md` — cross-platform font families, type scale in pt/sp/rem, breakpoints (xs–2xl), spacing & motion tokens.
+> - `02B_SCREEN_WIREFRAMES_PROMPT.md` — exact wireframe (anchor + size + behavior) for every screen.
+> - `02C_STATE_MATRIX_PROMPT.md` — loading / empty / error / offline state for every screen + skeleton recipes.
+
 ---
 
 ## 1. Core Principles

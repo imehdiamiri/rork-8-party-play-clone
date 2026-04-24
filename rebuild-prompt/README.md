@@ -14,6 +14,9 @@ Read files in numeric order. Each step builds on the previous one.
 |---|---|---|
 | 01 | `01_PROMPT.md` | Full product overview, platforms, game list, architecture, deliverables. **Read first, always.** |
 | 02 | `02_DESIGN_SYSTEM_PROMPT.md` | Colors, typography, components, animations, materials (tokens for SwiftUI + Compose + Tailwind) |
+| 02A | `02A_RESPONSIVE_AND_FONTS_PROMPT.md` | Cross-platform fonts (SF Pro / Inter / JetBrains Mono), type scale, breakpoints (xs–2xl), spacing tokens, motion tokens |
+| 02B | `02B_SCREEN_WIREFRAMES_PROMPT.md` | Per-screen textual wireframes — every element, anchor, size, and behavior for all 23 screens |
+| 02C | `02C_STATE_MATRIX_PROMPT.md` | Loading / empty / error / offline state for every screen, skeleton recipes, error copy library |
 | 03 | `03_FIREBASE_SETUP_PROMPT.md` | Firebase config, Firestore rules, Cloud Functions, Auth, Storage |
 | 04 | `04_ONBOARDING_AUTH_PROMPT.md` | Splash, onboarding slides, auth screen (Apple / Google / Email / Guest) |
 | 05 | `05_APP_SHELL_PROMPT.md` | Navigation shell, Friends tab, Profile sheet, Wallet, subscriptions, paywall |
