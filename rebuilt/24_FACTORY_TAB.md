@@ -1,37 +1,32 @@
 # 24 — Factory Tab (AI Game Idea Generator)
 
-Fourth tab. SF symbol `wand.and.stars`. Single screen `Views/GeneratorView.swift`.
+Fourth tab. SF symbol `wand.and.stars`. Single screen `Views/GeneratorView.swift` driven by `GeneratorViewModel`.
 
 ## Purpose
-Generate **fresh party-game ideas** ("ways to play together with friends") on demand using the AI proxy. These are not playable in-app — they're textual ideas you can do IRL with the people in front of you, or as inspiration for the dev team.
+Generate fresh party-game ideas on demand using the AI proxy. Output is textual / inspirational — not playable in-app.
 
-## Layout
-- Header: title "Factory" viralTitleStyle 20/.black + `ProfileToolbarButton`.
-- Hero card: "Need a new game? Generate one." with `wand.and.stars` icon and a "Generate" button.
-- Options panel:
-  - **Vibe**: chill / silly / competitive / spicy / family / random (chip row).
-  - **Player count**: 2 / 3-5 / 6-10 / 10+.
-  - **Setting**: indoor / outdoor / road trip / party / dinner / random.
-  - **Includes**: phones (toggle), drinks (toggle, 18+ only), pen & paper (toggle).
-- Generate button (PrimaryActionButtonStyle).
-- Result card area: shows the generated idea with `name`, `description`, `how to play` numbered steps, `materials needed`, `play time`, `difficulty`. Save to favorites button (heart) and Share button.
-- Below: list of "My Generated Games" (favorites). Tap to expand. Long-press to delete.
+## State (`GeneratorViewModel`)
+- `prompt: String` — free-text user input.
+- `playerCount: Int = 4` (clamped to `2...20`) — continuous integer picker, **not bucketed** (no "2 / 3-5 / 6-10 / 10+" chips).
+- `vibe: GameVibe` — chip row.
+- `isGenerating: Bool`, `errorMessage: String?`.
+- `result: GeneratedPartyIdea?`.
 
-## API
-Same Rork AI proxy as cards. System prompt in code (`GeneratorView` view model — internal) instructs:
-- Response must be JSON: `{name, description, materials[], steps[], playTime, difficulty}`.
-- Idea must be original (no copyrighted games).
-- Tone matches selected vibe.
-- Steps 3–6 items.
+## `GameVibe` cases
+`couple, funny, memory, action, cards, trivia, roleplay, challenge` (8 cases). Each vibe has a `promptDescriptor` used to build the AI system prompt. There is **no `chill / silly / competitive / spicy / family / random` vibe set.**
 
-Model: `openai/gpt-4o-mini`. Streaming optional (UI uses non-streaming).
+## What does NOT exist
+- ❌ no "Setting" picker (indoor / outdoor / road trip / …).
+- ❌ no "Includes" toggles (phones / drinks / pen & paper).
+- ❌ no favorites / saved-list of generated games.
+- ❌ no daily quota counter on the Factory screen (the 5/day quota is on the AI **card** generator only).
 
-## Quota
-Free users: 5 generations/day. Subscribers: 50/day. Counter in `UserDefaults`, midnight reset.
+## `GeneratedPartyIdea` shape
+`{ id, title, description, steps: [String], tags: [String] }`. There are **no `materials needed`, `play time`, or `difficulty` fields.**
 
-## Persistence
-Favorites stored in `UserDefaults` (Codable JSON). Max 100 saved.
-
-## Empty/error state
-- First-time hint overlay using `FirstTimeHintOverlay` explaining the feature.
-- Network error → inline red banner "Couldn't generate, try again".
+## UI
+- Header: title + `ProfileToolbarButton`.
+- Hero card with a Generate CTA.
+- Vibe chip row + player-count picker + `prompt` text field.
+- Result card showing `title`, `description`, numbered `steps`, and `tags` rendered as small chip labels.
+- Error state: inline red banner with `errorMessage`.

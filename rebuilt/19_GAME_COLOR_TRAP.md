@@ -1,35 +1,44 @@
 # 19 — Game: Color Trap
 
-**Premium:** Yes.  **Modes:** Single, Multi.  **Players:** 1–30.
+**Premium:** Yes.  **Modes:** Single-device, Multi-device.  **Players:** 1+.
 
 ## Concept
-A forbidden color is announced. Colored tiles flash one at a time. Tap every tile **except** the forbidden color. Three wrong taps and you're out. Last player standing or longest survivor wins.
+A forbidden colour is announced. Coloured tiles fall from the top of the screen through 4 columns. Tap every tile **except** the forbidden colour before it reaches the bottom.
+
+It is **not** a single swapping centre circle — it is a falling-tiles arena.
 
 ## Setup — `ColorTrapSetupView`
-- **Speed**: slow (1.4s/tile) / normal (1.0s) / fast (0.7s) / extreme (0.5s, ramps faster).
-- **Strikes allowed**: 3 (default), 5, unlimited (high score).
-- **Players list** (single) or **Room create/join** (multi).
+- **Difficulty** (`ColorTrapDifficulty`): `.easy / .medium / .hard`.
+  - Easy: `spawnInterval 0.9`, `tileLifetime 1.9s`, total duration `20s`.
+  - Medium: `0.65 / 1.5 / 30s`.
+  - Hard: `0.45 / 1.15 / 45s`.
+  - There is **no `slow / normal / fast / extreme` setting**.
+- **No strikes setting.** `maxFails` is a fixed constant in `ColorTrapViewModel`.
+- Players list (single) or room (multi).
 
-## Session — `ColorTrapSessionView`
-View model: `ColorTrapViewModel`.
+## Session — `ColorTrapSessionView` + `ColorTrapViewModel`
 
-### Round flow
-1. **Announce** — full-screen card "Don't tap RED" with the forbidden color filling the bg, 1.5s.
-2. **Live** — center of screen shows a single big colored circle that swaps every `tickInterval`. Player taps it if it's any color **other** than the forbidden one. If forbidden, **don't tap**.
-   - Correct tap (non-forbidden + tapped within window): +1 score, glow + haptic.
-   - Wrong tap (forbidden tapped, OR non-forbidden missed and timer expired): −1 strike, red flash + error haptic.
-   - Continues until strikes exhausted or 60s elapsed.
-3. **Result** — score (correct taps) + strikes used. Multi-device leaderboard combines.
+### Layout
+- 4-column falling-tile arena (`ColorTrapGenerator.columnCount = 4`).
+- Tiles drift from top to bottom over `tileLifetime` seconds with progress `t = (elapsed - spawnedAt) / lifetime`.
+- Tile size: `min(colWidth * 0.78, 72) * spawn.size` with a **`RadialGradient`** fill (not LinearGradient, not 220pt).
+- Static `Color.black.opacity(0.15)` arena background. **No pulsing background.**
+- Header strip at the **top** of the screen: forbidden-colour banner + 3 hearts that dim as fails accumulate.
+
+### Spawns
+`ColorTrapGenerator.generateSpawns(...)` uses a seeded RNG to pre-generate the entire spawn schedule up front. Multi-device: same seed → identical schedule across devices.
+
+### Palette
+`ColorTrapViewModel.palette` has **5 entries** (`paletteSize = 5`). State stores `forbiddenColorIndex: Int`, not a colour name string.
 
 ### State (`ColorTrapGameState`)
-- `forbiddenColor: String` ("red"/"blue"/"green"/"yellow"/"purple"/"orange").
-- `currentColor: String`.
-- `tickInterval: Double`.
-- `playerScores: [UUID: Int]`.
-- `playerStrikes: [UUID: Int]`.
-- `gameOver: Bool`.
+`difficulty, seed, forbiddenColorIndex, currentPlayerIndex, playerResults, isFinished`.
 
-### Visual
-- Background pulses with the current color at 6% opacity.
-- Big tappable circle 220pt with linear gradient of that color.
-- Bottom strip: 3 hearts, dim as strikes accumulate.
+### Scoring
+`score = hits * 10 + Int(survivalTime * 5) - fails * 15`.
+
+### Multi-device spectator
+Shows the first 8 spawns frozen at their schedule positions in `.saturation(0)` greyscale.
+
+### First-time hint
+`FirstTimeHintOverlay` keyed `"hint_seen_color_trap"`.

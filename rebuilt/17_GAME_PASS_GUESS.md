@@ -1,40 +1,39 @@
 # 17 — Game: Pass & Guess
 
-**Premium:** Yes.  **Modes:** Single-device.  **Players:** 2–30.
+**Premium:** Yes.  **Modes:** Single-device only.  **Players:** 2+.
 
 ## Concept
-A question is shown ("What's your guilty pleasure song?"). Players pass the phone, each types a private answer, the device shuffles them, then players take turns guessing **who wrote which answer**. The bigger the social group, the more chaos. After all guesses, reveal scoring.
+A question is shown. Players pass the phone, each privately writes an answer. Answers are shuffled and revealed one by one — players take turns guessing **who wrote which answer**.
 
 ## Setup — `PassGuessSetupView`
-Settings (`PassGuessSettings`):
-- **Question mode**: predefined (pick from a curated list grouped by category) or custom (enter your own).
-- **Selected question** OR custom text.
-- **Answer time limit** (seconds): 30 / 45 (default) / 60.
-- **Guess time limit**: 20 / 30 (default) / 45.
-- **Rounds**: 1–5.
+The setup view does **not** include a question picker. It only configures:
+- **Answer time** via `SetupTimerSection(range: 15...120, step: 10)` with icon `pencil.circle.fill`.
+- **Guess time** via `SetupTimerSection(range: 15...90, step: 10)` with icon `eye.circle.fill`.
+- **Round count** via `SetupRoundsSection`. Default `roundCount = 1`.
+- Players list.
 
-## Session — `PassGuessSessionView`
+The question itself is chosen at session start, not in the setup view.
+
+## Session intro screen — `PassGuessSessionView`
+Before the first round begins, the host picks the question:
+- `PassGuessQuestionMode` toggle: `.predefined` or `.custom`.
+- If `.predefined`: pick from a flat list of 22 hand-written questions (no category grouping). Stored as `introSelectedQuestionID`.
+- If `.custom`: free-text `introCustomQuestion`.
 
 ### Phases (`PassGuessRoundPhase`)
-1. **`.intro`** — Round N of M, big question card, "Tap to start answering" with a "Pass to {first player}" prompt.
-2. **`.answering`** — Each player in turn:
-   - "Pass to {name}" → tap-to-continue.
-   - Question shown again at the top.
-   - Answer TextField (multiline, max ~140 chars) with `Done` button. Countdown timer top-right.
-   - On submit, store `PassGuessAnswer(playerID, text)` and advance.
-   - Auto-skip if timer hits 0 with empty text.
-3. **`.guessing`** — answers shuffled. For each answer (sequentially):
-   - Card shows the answer text in big.
-   - Below, an avatar grid of all players. Each player **whose turn it is** taps the player they think wrote it. In single-device, voting is sequential (pass the phone for each guesser).
-   - Stores `PassGuessVote(answerID, voterID, guessedPlayerID)`.
-4. **`.reveal`** — Card-by-card flip animation reveals the actual writer + how many people guessed correctly. Scoring: +1 to each correct guesser, +2 to writer per **wrong** guess (people who got fooled).
-5. **`.leaderboard`** — sorted total scores across all rounds completed so far. "Next Round" or "Finish".
+`.intro / .answering / .guessing / .reveal / .leaderboard`.
 
-### Archived rounds
-Each completed round is added to `archivedRounds: [PassGuessArchivedRound]` so a history sheet can show all questions/answers/guesses from earlier rounds.
+1. **`.intro`** — round number + question. "Tap to begin."
+2. **`.answering`** — privacy screen ("They'll write their answer privately.") → next player taps to enter answer → `TextField` with countdown → submit. Auto-skip on timer expiry.
+3. **`.guessing`** — privacy screen ("They'll guess who wrote this answer.") → next guesser sees the shuffled answer card and an avatar grid → taps the player they think wrote it.
+4. **`.reveal`** — actual writer revealed; per-answer correct/wrong.
+5. **`.leaderboard`** — sorted totals + "Next Round" / "Finish".
 
-### View model
-`PassGuessRoundState` lives inside `GameSession.passGuessState`. Updated via `AppViewModel.updateSession(...)`.
+### Realtime sync
+Settings are stored on `AppViewModel.currentPassGuessSettings` and broadcast every change via `appModel.updatePassGuessSettings(updated)`.
 
-### Stars
-Win (highest total) = 5★, participation = 2★.
+### Persistence
+The 22-question bank is duplicated in two places: a private constant inside `PassGuessSessionView` and `AppViewModel.passGuessQuestionBank`.
+
+### Stars / RewardPolicy
+**Not invoked.** No stars are granted on game end.

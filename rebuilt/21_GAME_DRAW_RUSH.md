@@ -1,39 +1,27 @@
 # 21 — Game: Draw & Rush
 
-**Premium:** Yes.  **Modes:** Single, Multi.  **Players:** 2–12.  **Round:** 100s default.
+**Premium:** Yes.  **Modes:** Single-device, Multi-device.  **Players:** 2–12.
 
 ## Concept
-One player gets a secret concept (e.g. "Rocket"). They draw it on the screen. Everyone else races to guess. First correct guess wins the round. Drawer earns points based on how fast someone guessed.
+One player is the drawer. They either get a secret concept (`DRConceptMode.preset`) or freely pick what to draw (`.freeDraw`). Everyone else guesses. Drawer earns points based on how fast someone guesses.
 
 ## Setup — `DrawRushSetupView`
-- **Concept pack** picker: Easy / Normal / Hard / Random.
-- **Drawing time**: 30 / 60 (default) / 100s.
-- **Judge mode** toggle (single-device only): If on, the drawer types whether each guess is correct (since everyone yells answers). If off, the drawer taps "End round" when they hear the right answer.
+- **Concept mode** (`DRConceptMode`): `.preset` (drawer is shown a secret word) or `.freeDraw` (drawer picks freely; the concept screen shows "Free draw"). There is **no Easy/Normal/Hard/Random pack picker.**
 - Players list (single) or room (multi).
+- Subtitle is hard-coded: "Each player draws once · 60s per turn." There is **no drawing-time picker, no judge-mode toggle.**
 
 ## Single-device session — `DrawRushSessionView`
+## Multi-device session — `DrawRushMultiDeviceSessionView`
+These are **two distinct files**, not just two flows in one view. The view model is constructed with `DrawRushViewModel(isMultiDevice: Bool, conceptMode: DRConceptMode, ...)`.
 
-### Flow
-1. **Pass to drawer** — "Hand the phone to {name}".
-2. **Concept reveal** — only drawer sees: "Draw: ROCKET" centered. "I'm Ready" → starts.
-3. **Live drawing** — full-screen Canvas with finger drawing. Toolbar at top: undo, clear, color (5 colors), brush size (3 sizes), eraser. Timer at top right. The drawer's canvas is **hidden from the others initially**, then revealed after a 3-second "Get ready guessers!" intro.
-4. **Guess** — others shout. Drawer (or anyone, judge-mode off) taps "Someone got it" → input the guesser name from a list of players → +points.
-5. **Result** — show winning guesser, drawing thumbnail, points earned.
+### Phases (`DrawRushPhase`)
+`turnIntro / drawerReveal / drawing / passForGuesses / guessing / drawerJudging / roundResults / finalLeaderboard`.
 
-### Multi-device session — `DrawRushMultiDeviceSessionView`
-- Drawer's canvas is **streamed** to other phones via realtime broadcast. Strokes are encoded as compressed `[CGPoint]` arrays sent in batches every ~150ms.
-- Guessers tap a "Guess" button → text input → submitted via realtime. Drawer sees a live list of guesses; first correct match (case-insensitive) ends the round.
-- Drawer cannot see guesses live in single-device mode; only in multi-device.
+### Drawing
+Full-screen Canvas. Strokes are `DRStroke` values whose `color` property is a **string raw value of an enum** (not a hex string).
 
-### Scoring
-- Drawer: `100 - (timeUsed seconds)` (clamped 10–100). Bonus +20 if guessed in <20s.
-- Guesser: 50 (1st correct), 25 (2nd correct), 10 (3rd correct).
-- Stars: 5 win / 2 participation.
+### Realtime
+In multi-device, drawer streams strokes to other devices via realtime broadcast.
 
-### Drawing model — `Models/DrawRushModels.swift`
-- `Stroke { id, color (hex), width, points: [CGPoint] }`.
-- `DrawingSnapshot { strokes: [Stroke], canvasSize: CGSize }`.
-- Realtime envelope: `DrawingDelta { newStrokes: [Stroke], removedStrokeIDs: [UUID] }` (for undo).
-
-### View model — `DrawRushViewModel`
-Owns `currentDrawing: DrawingSnapshot`, `currentStroke: Stroke?`, `concept: String`, `phase`, `secondsRemaining`, `winner: PlayerProfile?`.
+### Leaderboard
+`DrawRushViewModel.leaderboard` is a computed sorted players array. **No `RewardPolicy` invocation.**

@@ -1,40 +1,38 @@
 # 15 — Game: Memory Path
 
-**Premium:** Yes.  **Modes:** Single, Multi, Team.  **Players:** 2–30.
+**Premium:** Yes.  **Modes:** Single, Multi, Team.  **Players:** 2+.
 
 ## Concept
-A path is hidden on a 5×5 / 6×6 / 7×7 grid. You start at the bottom-left and tap your way step by step to the top-right. A correct tile lights up green; a wrong tile flashes red and the game punishes you (depending on game mode).
+A hidden orthogonal path is generated on a grid. Players tap their way along it step-by-step. Correct tap = green; wrong tap = red shake + reset progress.
 
 ## Setup — `MemoryPathSetupView`
-- **Difficulty** picker:
-  - Easy → 5×5 grid, 5 steps
-  - Medium → 6×6, 6 steps (default)
-  - Hard → 6×6, 8 steps
-  - Expert → 7×7, 10 steps
-- **Game mode** picker:
-  - **Time Race** (default) — wrong tap costs 3s; finish fastest wins.
-  - **Limited Attempts** — 5 wrong taps total; if exceeded you're out.
-  - **Only One Try** — first wrong tap ends your run; lowest reach wins, ties by time.
+- **Difficulty card** — picks the `MemoryPathDifficulty` (`.easy / .medium / .hard / .expert`) which controls grid size.
+- **Path Length card** — separate +/− stepper using `MemoryPathSettings.stepsRange(for: difficulty)`. Grid size and step count are decoupled.
+- **Game mode** — `MemoryPathGameMode` has only **two** cases: `.timeRace` and `.turnBased`. There is **no "Limited Attempts" mode and no "Only One Try" mode.**
+- Play type — single / team rotation.
 - Players list (single/team) or room (multi).
 
-## Path generation — `Services/MemoryPathGenerator.swift`
-Deterministic, seeded by session UUID. Generates a valid orthogonal path from `(0, gridSize-1)` (bottom-left) to `(gridSize-1, 0)` (top-right) using a randomized DFS that biases toward the goal. `targetSteps` includes start + end. Outputs `pathIndices: [Int]` (row-major flattened).
+## Path generation — `MemoryPathGenerator`
+Generates a valid path; outputs `pathTiles` (row/col tuples), `startTile` (rendered green), `endTile` (rendered cyan).
 
-## Session — `MemoryPathSessionView`
+## Session — `MemoryPathSessionView` + `MemoryPathViewModel`
 
-### Phases
-1. **Show path** — path tiles flash blue in sequence for ~1.5s total, then disappear. Single device: shows once at the start of each player's turn. Multi/team: shown simultaneously to everyone, then everyone races.
-2. **Live** — grid of 25/36/49 tiles; current player taps. Correct tile = green pulse + check. Wrong = red shake (use `.modifier(ShakeEffect(amount: 6))` or rotation jiggle), penalty applied.
-3. **Result** — per-player completion time + attempts + reach. Sort.
+### Phases (`MemoryPathPhase`)
+`setup / countdown / passDevice / turnSwitch / playing / hintActive / finished`.
+
+### Tap behaviour
+- Correct tap → tile pulses green, `progress` advances.
+- Wrong tap → tile uses a custom red shake (`.offset(x: -4)` + `.scaleEffect(0.92)` with a spring `repeatCount: 3, autoreverses`) and `progress` resets to step 1. There is **no time penalty in time-race mode** (no 3s cost). There is **no `ShakeEffect` modifier in the codebase.**
+- In `.turnBased` single-device, a wrong tap consumes a `turnAttempts` retry; in turn-based multi-player single-device it rotates to the next player via `passDevice`.
 
 ### Hint button
-A small `lightbulb.fill` button appears after 3 wrong taps in **Time Race** mode (other modes never show it). One use per round; reveals the next correct tile for 1s. Costs no stars.
+Icon: `eye.fill` (**not `lightbulb.fill`**). Eligibility: `hintEligible = settings.playType == .team && gridSize >= 7 && stepsToFind >= 15`. Unlocks once `progress >= 50% of stepsToFind`. Reveals the next correct tile for **2 seconds** (not 1s). It is a **team-mode** feature, not a time-race feature.
 
-### View model — `MemoryPathViewModel`
-Tracks `currentStep`, `attempts`, `wrongTapsThisRound`, `startTime`, `isFinished`.
+### Confetti
+On finish, an in-view `ConfettiPiece` particle simulation (~30 pieces) is drawn — implemented inline, no external library.
 
 ### Scoring
-- Time Race winner = lowest elapsed.
-- Limited Attempts winner = farthest progress; ties by time.
-- Only One Try winner = farthest; ties by time.
-RewardPolicy: starsForWin 8, participation 2.
+Per-player ranking score = `completionBonus + progressScore + efficiencyBonus + timeBonus`. **No `RewardPolicy` invocation.**
+
+### First-time hint
+`FirstTimeHintOverlay` keyed `"hint_seen_memory_path"`.

@@ -3,26 +3,33 @@
 **Premium:** Yes.  **Modes:** Single-device only.  **Players:** 3–11.
 
 ## Concept
-Each player secretly draws a number 1–10. A scenario is shown ("How much do you love pineapple on pizza?", "How clean is your room?"). Each player acts/answers in a way that **expresses** their number. Then everyone (in turn) guesses what number each other player had. Closer guesses score more.
+Each round has one designated **guesser**. Every other player secretly receives a private number from `1` to `playerCount - 1` (so e.g. with 4 players, numbers 1–3; the "10" in the title is just branding). A scenario is shown. Each non-guesser acts/answers in a way that expresses their assigned number. After everyone has acted, the guesser tries to guess each non-guesser's number.
+
+There is **no rounds picker** — `totalRounds = players.count`, so every player becomes the guesser exactly once across the game.
+
+There is **no scenario pack picker.** A single fixed array of 30 scenarios is hard-coded inside the view model, and `usedScenarioIndices: Set<Int>` prevents repeats until exhausted.
 
 ## Setup
-- Players list 3–11.
-- Rounds (1–5).
-- Scenario pack picker (general / spicy / family / random).
+- Players list 3–11 (`GameType.tenTangle.minPlayers = 3, maxPlayers = 11`).
+- No rounds picker, no scenario pack picker.
 
 ## Session — `TenTangleSessionView` + `TenTangleViewModel`
 
-### Phases
-1. **Number reveal** — pass the phone, each player taps "Show my number" → big number 1–10 with subtitle "Don't tell anyone!" → "Hide" → next.
-2. **Scenario** — full-screen scenario card with `theatermasks.fill` icon and title + body.
-3. **Acting** — each player in turn presses "I'm Done" after they've expressed their number to the group. No timing; freeform.
-4. **Guess matrix** — each player, on their turn, taps a number (1–10) for every **other** player (everyone they think). Use a horizontal selection of avatars + 10-button row. Shows "Skip" if they prefer not to guess one.
-5. **Reveal & score** — all guesses revealed simultaneously. Score per guess = `max(0, 10 − |guess − actual|)`. Total per player.
-6. **Round result** — sorted leaderboard. "Next Round" or "Finish".
+### Phases (full state machine)
+`setup → guesserAnnounce → passToPlayer → showNumber → scenarioReveal → acting → guesserGuessing → roundReveal → scoreboard → finalResults`.
 
-### Settings model
-Internal struct (in `TenTangleViewModel`): `numberOfRounds`, `scenarioPackID`, `playerCount`. No persistence; new game each session.
+1. **Guesser announce** — name of this round's guesser.
+2. **Pass-to-player loop** — each non-guesser in turn taps to reveal their secret number.
+3. **Show number** — big number `Text("\(number)").font(.system(size: 96, weight: .heavy, design: .rounded))` (size **96**, not `viralTitleStyle`). Disaster/Perfect scale labels: `1 = "Disaster 😬"` (red), `max = "Perfect 😍"` (green); intermediate values colour-graded by `numberColor(_:)` (red <0.34, yellow <0.67, green ≥0.67 of max).
+4. **Scenario reveal** — full-screen scenario card.
+5. **Acting** — non-guessers act out their numbers freeform; guesser steps away.
+6. **Guesser guessing** — for each non-guesser, the guesser picks a number from a `ScrollView(.horizontal) + HStack` of buttons (single row, **not a 5×2 LazyVGrid**).
+7. **Round reveal** — actual numbers shown next to guesses.
+8. **Scoreboard** — per-round.
+9. **Final results** — full sorted scoreboard with rank emojis 🥇🥈🥉. Not a winner-only screen.
 
-### UI notes
-- Big-number reveal uses `viralTitleStyle(120, .black)` with mesh accent.
-- Guess matrix is a `LazyVGrid` with 5×2 number buttons inside a SurfaceCard per player target.
+### Scoring
+**Binary**: `if guess == actual { roundPoints += 1 }`. There is **no `max(0, 10 - |guess - actual|)` proximity formula.**
+
+### Internal state
+Lives directly on `TenTangleViewModel` properties (no separate `Settings` struct). Key fields: `players`, `currentRoundIndex`, `totalRounds (= players.count)`, `currentGuesserIndex`, `currentNumber`, `usedScenarioIndices`, `scores`.

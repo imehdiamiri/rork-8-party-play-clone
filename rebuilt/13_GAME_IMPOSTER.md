@@ -1,50 +1,49 @@
 # 13 — Game: Imposter
 
-**Premium:** No.  **Modes:** Single-device, Multi-device, Team.  **Players:** 4–30.
+**Premium:** No.  **Modes:** Single-device only (`GameType.imposter.supportedModes = [.singleDevice]`).  **Players:** 4+.
 
-## Routing (special)
-Imposter does **not** use the shared `GameDetailView`. The home grid pushes:
-1. `ImposterStyleSelectionView` — pick **Discussion Mode** or **Clue Mode**.
-2. `ImposterGameDetailView` — pick mode (single/multi/team), category pack, rounds, discussion duration.
-3. Active session: `ImposterSessionView`.
+There is **no multi-device, no team mode, no realtime sync** for Imposter. The `ImposterGameDetailView` only renders the single-device card.
 
-## Style selection (`ImposterStyleSelectionView`)
-Two tappable cards stacked vertically:
-- **Discussion Mode** — `bubble.left.and.bubble.right.fill` orange. "Talk together and find the Imposter." 3 bullets: Free discussion, Timed conversation, Then voting.
-- **Clue Mode** — `magnifyingglass.circle.fill` purple. "Give clues one by one." 3 bullets: Turn-based clues, No discussion, Then voting.
+## Routing
+1. `ImposterStyleSelectionView` — pick **Discussion Mode** or **Clue Mode** (two large cards, full-width, with a `chevron.right` and `LinearGradient` overlay — not a 12% bg + tint border SurfaceCard).
+2. `ImposterGameDetailView` — hero card + single-device setup card + category picker + rounds + (Discussion mode only) discussion timer + players list.
+3. `ImposterSingleDeviceSetupView` → `ImposterSessionView`.
 
-Each card: SurfaceCard with accentColor 12% bg + tint border.
+## Style cards (`ImposterStyleSelectionView`)
+- **Discussion Mode** — `bubble.left.and.bubble.right.fill` orange.
+- **Clue Mode** — `magnifyingglass.circle.fill` purple.
+
+Subtitle and 1-line "details" are rendered as a single `·`-separated horizontal strip, not three stacked bullets.
 
 ## Game Detail (`ImposterGameDetailView`)
-- Hero card identical to the shared style.
-- Mode picker (single/multi/team). Multi & team route to `CasualCreateRoomView(game: .imposter, mode:)`.
-- **Category pack** picker — segmented 3-cols grid: Animals 🐯, Food 🍕, Places 🌍, Jobs 👮, Movies 🎬, Random 🎲. Selected card has 2pt blue stroke and 18% blue bg.
-- Rounds: 1 / 3 / 5.
-- Discussion duration (only for Discussion mode): 30 / 60 / 90 / 120s.
-- Players list (single/team) min 4.
-- Start button.
+- Hero card.
+- **Category** picker — a **horizontal `ScrollView` of pill chips** (not a 3-col grid, no emoji icons). Categories: "Animals", "Food & Drinks", "Places", "Jobs", "Movies", "Random". Selected chip uses `gameStyle.accentColor` (orange for Discussion, purple for Clue), not blue.
+- Rounds via `SetupRoundsSection`.
+- **Discussion duration** (Discussion mode only) via `SetupTimerSection(range: 10...300, step: 10)` with icon `bubble.left.and.bubble.right.fill`. Not 30/60/90/120 chips.
+- Players list (min 4).
+- `HowToPlayButton` and Start.
 
 ## Session — `ImposterSessionView`
 
 ### Roles
-At round start the engine secretly picks one player as the Imposter. Everyone else sees the same secret word from the chosen pack. The imposter sees a placeholder "?" and knows they are the imposter.
+At round start one random player is the Imposter; everyone else sees the same secret word from the chosen category. The imposter sees a "?" placeholder.
 
 ### Phases (`ImposterPhase`)
-1. **`.roleReveal`** — pass-the-phone in single-device. Each player taps "I'm Ready" → sees their card (eye icon, secret word in big bold or "You are the Imposter") → "Hide" → next player. Multi-device: each player sees their own card on their own phone simultaneously.
-2. **`.ready`** — confirmation that all `revealedPlayerIDs == players`. "Start Discussion" / "Start Clues" button.
-3. **`.discussion`** — Discussion mode only. Big countdown (mm:ss). Free talk. Auto-advances when timer hits 0 or host taps "End Early".
-4. **`.clueGiving`** — Clue mode only. Show current player name + 1-line text input "Your clue (one phrase)". Submit → next player. Cycles through `players.indices`.
-5. **`.voting`** — Each player votes for who they think the imposter is. In single-device, pass-the-phone with hidden votes. In multi/team, simultaneous tap on phones. Vote tallies displayed only after all submitted.
-6. **`.result`** — Reveal imposter. If majority correct → crew wins. Imposter still wins if they correctly **guess the secret word** when given a chance ("As the imposter, what was the word?" 3 chances). Animations: confetti for crew win (use `LinearGradient` particle simulation or `.symbolEffect(.bounce)` on multiple icons), red dim for imposter win.
+1. **`.roleReveal`** — single-device pass-the-phone. Each player taps "I'm Ready", reveals their card, taps "Hide", passes.
+2. **`.ready`** — confirmation that all players have seen their card. Start button.
+3. **`.discussion`** (Discussion mode) — countdown driven by `startDiscussionTimer` which **rebuilds the entire `ImposterRoundState` every second** to decrement `discussionTimeRemaining`. Has a "Skip to Voting" button.
+4. **`.clueGiving`** (Clue mode) — current player types a clue (single-line `TextField`, **hard-capped at 30 chars** via `String(trimmed.prefix(30))`). Submits, cycles.
+5. **`.voting`** — pass-the-phone hidden votes. Tally shown only after all submitted.
+6. **`.result`** — Reveal imposter, show a **Scoring SurfaceCard** stating the rules in plain text, "Play Again" button.
 
-### State
-`ImposterRoundState` (file 04). Stored inside `GameSession.passGuessState? || imposterRoundState?` — actually a dedicated field; see `AppViewModel.swift` for the precise property. Realtime channels broadcast `state_changed` with `ImposterRoundState` snapshots.
+There is **no imposter-word-guess mechanic, no "3 chances", no confetti, no particle simulation, no red dim animation.** The result view is a static green/red icon + text + score card.
 
-### Team mode
-Two teams. The imposter is randomly assigned to either team. Team scores tracked. After each round, the role rotates: a new imposter from the **opposite** team is picked.
+### Scoring (actual code)
+- Crew wins (correct vote): each correct voter +**100**.
+- Imposter survives (incorrect vote): imposter +**150**.
+- Otherwise: 0.
 
-### Scoring
-- Crew wins: each non-imposter +50 points.
-- Imposter wins: imposter +100 points.
-- Imposter survives but loses (correct vote) but still guesses the word: imposter +75 points.
-- Stars awarded per `RewardPolicy(gameKey: "imposter", starsForWin: 5, starsForParticipation: 1)`.
+There is **no `RewardPolicy` invocation, no star granting on game end, no +75 "guesses the word" rule.**
+
+### Sounds
+`FeedbackService.shared.playRoundStart()`, `playPhaseTransition()`, `playClick()`, `playVote()`, `playResultReveal()`, `playGameEnd()`.

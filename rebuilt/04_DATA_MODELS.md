@@ -73,12 +73,12 @@ The static `library` array is the **canonical game list (11 games)**. Exact entr
 ### Per-game state structs (all `nonisolated`, `Hashable`, `Sendable`)
 
 - **Pass & Guess:** `PassGuessSettings(rounds, questionMode, selectedQuestionID?, customQuestion, answerTimeLimit=45, guessTimeLimit=30)`, `enum PassGuessQuestionMode: predefined, custom`, `enum PassGuessRoundPhase: intro, answering, guessing, reveal, leaderboard`, plus `PassGuessQuestion`, `PassGuessAnswer`, `PassGuessVote`, `PassGuessRevealItem`, `PassGuessArchivedRound`, `PassGuessRoundState`.
-- **Guess the Seconds:** `GTSTurnResult { playerID, playerName, round, targetTime, actualTime, difference }`, `GuessTheSecondsGameState { activeTurnIndex, roundTargets[Int:Double], turnResults, selectedTime=15, roundsPerPlayer=3, totalTurns=6 }` with helpers `isFinished`, `currentRoundNumber(playerCount:)`, `isFirstPlayerOfRound`.
-- **Memory Grid:** `enum MemoryGridSize: tiny3x4, small4x4 (default), medium4x5, large5x6, xl6x6` (each maps to (rows, cols, pairCount, tileCount)), `struct MemoryGridSettings { gridSize }` (`default = small4x4`, `teamDefault = large5x6`), `MemoryTile`, `MGPlayerResult`, `MGSpectatorTile`, `MGSpectatorSnapshot`, `MemoryGridGameState { gridSize, currentPlayerIndex, playerResults, isFinished, spectator? }`.
-- **Memory Path:** `MPPlayerResult`, `MemoryPathGameState { difficulty="medium", gameMode="timeRace", targetSteps=6, pathIndices, gridSize=6, currentPlayerIndex, playerResults, isFinished }`. (Detail tables in `MemoryPathModels.swift`.)
+- **Guess the Seconds:** state is **not** stored in a `GuessTheSecondsGameState` struct on the session — it lives directly on `GuessTheSecondsSessionViewModel` as `activeTurnIndex`, `roundTargets: [Int: Double]`, `results: [TurnResult]`. Computed: `totalTurns = session.rounds.count`, `currentRoundNumber`, `isFirstPlayerOfCurrentRound`. There is no `roundsPerPlayer` or `selectedTime` field on a state struct.
+- **Memory Grid:** `enum MemoryGridSize: tiny3x4, small4x4, medium4x5, large5x6, xl6x6` (each maps to (rows, cols, pairCount, tileCount)), `struct MemoryGridSettings { gridSize }`. **Setup default is `tiny3x4`** (the `MemoryGridSettings.teamDefault` constant exists but is not actually wired into the setup view), `MemoryTile`, `MGPlayerResult`, `MGSpectatorTile`, `MGSpectatorSnapshot`, `MemoryGridGameState { gridSize, currentPlayerIndex, playerResults, isFinished, spectator? }`.
+- **Memory Path:** `MPPlayerResult`, `MemoryPathGameState`. `MemoryPathGameMode` has only **two** cases: `.timeRace` and `.turnBased` (no `limitedAttempts`, no `onlyOneTry`). Path tiles are stored as `pathTiles` (row/col pairs) plus `startTile` and `endTile`. `MemoryPathPhase`: `setup / countdown / passDevice / turnSwitch / playing / hintActive / finished`.
 - **Imposter:** `enum ImposterGameStyle: discussion, clue` (titles & 3-bullet detail lists), `enum ImposterCategoryPack: animals/food/places/jobs/movies/random` with 12 fixed words each, `struct ImposterSettings(gameStyle, rounds=3, discussionDuration=60, categoryPack=.random)`, `enum ImposterPhase: roleReveal, ready, discussion, clueGiving, voting, result`, `struct ImposterRoundState { settings, phase, secretWord, imposterPlayerID, revealedPlayerIDs, readyPlayerIDs, currentCluePlayerIndex, clues, votes, discussionTimeRemaining }`, `ImposterClue`, `ImposterVote`.
-- **Tap in Order:** `TapInOrderGameState` (defined inside `AppModels.swift` further down — read the file). Has board size, target sequence, per-player progress.
-- **Color Trap:** `ColorTrapGameState` likewise.
+- **Tap in Order:** `TapInOrderGameState { variant, gridSize, tileCount, seed, selectedCells, currentPlayerIndex, playerResults, isFinished }`. `TapInOrderVariant`: `.numberMemory, .patternMemory` (no Classic/Hide-after-3/All-hidden). Grid sizes: `[4, 5, 6, 7]`.
+- **Color Trap:** `ColorTrapGameState { difficulty, seed, forbiddenColorIndex, currentPlayerIndex, playerResults, isFinished }`. `ColorTrapDifficulty`: `.easy / .medium / .hard` (no slow/normal/fast/extreme). 4 columns, 5-colour palette.
 
 ### Team mode
 - `struct TeamAssignment { id ("team_a"/"team_b"), name, playerIDs }` with `adding/removing` builders.
@@ -97,7 +97,6 @@ The static `library` array is the **canonical game list (11 games)**. Exact entr
 - `enum SubscriptionTier: weekly(40)/monthly(120)/yearly(500)/lifetime(500)` (starsPerPeriod). Provides `displayName`, `accentColor`, `icon`, and `static detect(from productIdentifier:)` heuristic.
 - `struct UserSubscription { tier?, isActive, isLifetime, expiresAt?, autoRenews, lastStarGrantDate? }` + `hasPremiumAccess`, `monthlyStars`. `static let none`.
 - `struct RewardPolicy(gameKey, starsForParticipation=0, starsForWin=0, minimumMatchDurationSeconds=30, minimumActionsRequired=1)`.
-- `enum PerformanceBadge: perfectEcho/reverseMaster/closeMatch/funnyTry/chaosLegend` mapped from a 0–100 score for Reverse Singing reveal.
 
 ## `Models/CardModels.swift` (decks)
 Deck domain for Tools→Cards. Provides categories (Act / Talk / Challenges / Penalty / Couple), card structs, saved/locked state, AI-generated card markers. Loaders return seed decks bundled with the app.
@@ -116,7 +115,7 @@ Defines tutorial/instruction blocks shown at the top of every game's setup scree
 Concept lists, drawing modes, single-device round shape, multi-device snapshot encoding (compressed stroke array).
 
 ## `Models/MemoryPathModels.swift`
-Difficulty enum (easy/medium/hard/expert) → grid size + steps. Game-mode enum (timeRace/limitedAttempts/onlyOneTry).
+Difficulty enum (easy/medium/hard/expert) → grid size + steps. Game-mode enum: only `.timeRace` and `.turnBased`.
 
 ## `Models/SpinBottleModels.swift`
 Player list, last-pointed player, dare/truth pack reference.
@@ -124,4 +123,4 @@ Player list, last-pointed player, dare/truth pack reference.
 ## `Models/SupabaseModels.swift`
 Codable DTOs for every table + RPC payload (Profiles, Friends, FriendRequests, GameResults, StarTransactions, Subscriptions, Sessions, Rooms, RoomPlayers, Realtime broadcast envelopes). Every struct is `nonisolated, Codable, Sendable`. Coding keys snake-case ↔ camelCase.
 
-> Do **not** add fields for XP, levels, fakeAnswer state, hot bomb, wrong-answer, or title-it. Those were removed.
+> Do **not** add fields for XP, levels, fakeAnswer state, hot bomb, wrong-answer, title-it, or `PerformanceBadge`/Reverse-Singing similarity scoring. Those were removed or never built. Do not add a `RewardPolicy` invocation per game — it exists in `EconomyModels.swift` as a stub but is never used.
