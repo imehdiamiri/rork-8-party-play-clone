@@ -15,15 +15,13 @@ final class SharedResultBuilder {
             let rank = index + 1
             let score = scores[player.id] ?? 0
             let isWin = rank == 1
-            let xpWon = isWin ? policy.xpForWin : policy.xpForParticipation
             let starsWon = isWin ? policy.starsForWin : policy.starsForParticipation
 
             return GameResultRow(
                 name: player.username,
                 score: score,
                 rank: rank,
-                starsWon: starsWon,
-                xpWon: xpWon
+                starsWon: starsWon
             )
         }
     }

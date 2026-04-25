@@ -64,7 +64,6 @@ final class AppViewModel {
     var isBusy: Bool = false
     var isSearchingFriends: Bool = false
     var isProcessingWalletAction: Bool = false
-    var xpProgress: [XPProgress] = []
     var inviteCode: String = ""
     var inviteTotalCount: Int = 0
     var inviteStarsEarned: Int = 0
@@ -158,18 +157,6 @@ final class AppViewModel {
         self.friendSearchResults = []
         self.roomInvites = []
         self.visibleRooms = []
-        self.xpProgress = [
-            XPProgress.empty(gameKey: GameType.reverseSinging.rawValue, gameName: GameType.reverseSinging.name),
-            XPProgress.empty(gameKey: GameType.guessTheSeconds.rawValue, gameName: GameType.guessTheSeconds.name),
-            XPProgress.empty(gameKey: GameType.tenTangle.rawValue, gameName: GameType.tenTangle.name),
-            XPProgress.empty(gameKey: GameType.imposter.rawValue, gameName: GameType.imposter.name),
-            XPProgress.empty(gameKey: GameType.memoryGrid.rawValue, gameName: GameType.memoryGrid.name),
-            XPProgress.empty(gameKey: GameType.memoryPath.rawValue, gameName: GameType.memoryPath.name),
-            XPProgress.empty(gameKey: GameType.passGuess.rawValue, gameName: GameType.passGuess.name),
-            XPProgress.empty(gameKey: GameType.tapInOrder.rawValue, gameName: GameType.tapInOrder.name),
-            XPProgress.empty(gameKey: GameType.colorTrap.rawValue, gameName: GameType.colorTrap.name),
-            XPProgress.empty(gameKey: GameType.spinBottle.rawValue, gameName: GameType.spinBottle.name)
-        ]
 
         authService.startAuthListener { [weak self] session in
             guard let self else { return }
@@ -1759,20 +1746,6 @@ final class AppViewModel {
 
 
 
-    // MARK: - XP Helpers
-
-    func xpForGame(_ gameKey: String) -> XPProgress? {
-        xpProgress.first(where: { $0.gameKey == gameKey })
-    }
-
-    func totalXP() -> Int {
-        xpProgress.reduce(0) { $0 + $1.xp }
-    }
-
-    func globalLevel() -> Int {
-        XPLevelCurve.levelForXP(totalXP())
-    }
-
     // MARK: - Private Implementation
 
     func completeOnboarding(playerName: String = "Player") {
@@ -1870,15 +1843,6 @@ final class AppViewModel {
             )
         }
         starWallet = StarWallet(balance: balance, transactions: transactions)
-
-        let xpRecords = try await databaseService.fetchXPProgress(for: currentUserID)
-        xpProgress = xpRecords.map { record in
-            let gameName = GameType.library.first(where: { $0.rawValue == record.gameKey })?.name ?? record.gameKey
-            return XPProgress.fromXP(gameKey: record.gameKey, gameName: gameName, xp: record.xp, matchesPlayed: record.matchesPlayed, wins: record.wins)
-        }
-        if xpProgress.isEmpty {
-            xpProgress = [XPProgress.empty(gameKey: GameType.reverseSinging.rawValue, gameName: GameType.reverseSinging.name)]
-        }
 
         gameUnlocks = GameType.library.map { game in
             let status: GameUnlockStatus
@@ -2113,13 +2077,11 @@ final class AppViewModel {
                 let rank = index + 1
                 let policy = RewardPolicy.defaultPolicy
                 let isWin = rank == 1
-                let xpAwarded = isWin ? policy.xpForWin : policy.xpForParticipation
                 let starsAwarded = isWin ? policy.starsForWin : policy.starsForParticipation
                 return GameResultUpsertRecord(
                     sessionID: activeSessionRecordID, userID: player.id,
                     rank: rank, score: player.score,
-                    starsAwarded: starsAwarded,
-                    xpAwarded: xpAwarded
+                    starsAwarded: starsAwarded
                 )
             }
             Task {
@@ -2134,33 +2096,8 @@ final class AppViewModel {
             }
         }
 
-        updateXPAfterMatch(game: session.game, isWin: results.first?.name == username)
         grantStarsAfterMatch(game: session.game, isWin: results.first?.name == username, mode: session.mode)
         MultiplayerTelemetry.shared.log(event: "results_screen_shown", source: "session", success: true, props: ["player_count": "\(session.players.count)"])
-    }
-
-    private func updateXPAfterMatch(game: GameType, isWin: Bool) {
-        let policy = RewardPolicy.defaultPolicy
-        let xpGain = isWin ? policy.xpForWin : policy.xpForParticipation
-        if let index = xpProgress.firstIndex(where: { $0.gameKey == game.rawValue }) {
-            let current = xpProgress[index]
-            let newXP = current.xp + xpGain
-            xpProgress[index] = XPProgress.fromXP(
-                gameKey: current.gameKey,
-                gameName: current.gameName,
-                xp: newXP,
-                matchesPlayed: current.matchesPlayed + 1,
-                wins: current.wins + (isWin ? 1 : 0)
-            )
-        } else {
-            xpProgress.append(XPProgress.fromXP(
-                gameKey: game.rawValue,
-                gameName: game.name,
-                xp: xpGain,
-                matchesPlayed: 1,
-                wins: isWin ? 1 : 0
-            ))
-        }
     }
 
     private func grantStarsAfterMatch(game: GameType, isWin: Bool, mode: GameMode) {
@@ -2486,7 +2423,7 @@ final class AppViewModel {
             secondsRemaining: session.secondsRemaining,
             latestAwardedPoints: session.latestAwardedPoints,
             latestFeedback: session.latestFeedback,
-            results: session.results.map { SessionStateResultRecord(id: $0.id, name: $0.name, score: $0.score, rank: $0.rank, starsWon: $0.starsWon, xpWon: $0.xpWon) },
+            results: session.results.map { SessionStateResultRecord(id: $0.id, name: $0.name, score: $0.score, rank: $0.rank, starsWon: $0.starsWon) },
             liveState: SessionStateLiveStateRecord(guessText: session.liveState.guessText, hasStartedTiming: session.liveState.hasStartedTiming, measuredElapsedTime: session.liveState.measuredElapsedTime, hasSubmittedTiming: session.liveState.hasSubmittedTiming, promptVisibleToPerformer: session.liveState.promptVisibleToPerformer),
             fakeAnswerState: session.fakeAnswerState.map { state in
                 SessionStateFakeAnswerRoundStateRecord(
@@ -2615,7 +2552,7 @@ final class AppViewModel {
             secondsRemaining: state.secondsRemaining,
             latestAwardedPoints: state.latestAwardedPoints,
             latestFeedback: state.latestFeedback,
-            results: state.results.map { GameResultRow(id: $0.id, name: $0.name, score: $0.score, rank: $0.rank, starsWon: $0.starsWon, xpWon: $0.xpWon) },
+            results: state.results.map { GameResultRow(id: $0.id, name: $0.name, score: $0.score, rank: $0.rank, starsWon: $0.starsWon) },
             liveState: RoundLiveState(guessText: state.liveState.guessText, hasStartedTiming: state.liveState.hasStartedTiming, measuredElapsedTime: state.liveState.measuredElapsedTime, hasSubmittedTiming: state.liveState.hasSubmittedTiming, promptVisibleToPerformer: state.liveState.promptVisibleToPerformer),
             fakeAnswerState: state.fakeAnswerState.map { fakeState in
                 FakeAnswerRoundState(
@@ -2787,17 +2724,6 @@ final class AppViewModel {
             GameDefinition(id: .colorTrap, accentName: "pink"),
             GameDefinition(id: .drawRush, accentName: "cyan"),
             GameDefinition(id: .spinBottle, accentName: "red")
-        ]
-        xpProgress = [
-            XPProgress.empty(gameKey: GameType.reverseSinging.rawValue, gameName: GameType.reverseSinging.name),
-            XPProgress.empty(gameKey: GameType.guessTheSeconds.rawValue, gameName: GameType.guessTheSeconds.name),
-            XPProgress.empty(gameKey: GameType.tenTangle.rawValue, gameName: GameType.tenTangle.name),
-            XPProgress.empty(gameKey: GameType.memoryGrid.rawValue, gameName: GameType.memoryGrid.name),
-            XPProgress.empty(gameKey: GameType.memoryPath.rawValue, gameName: GameType.memoryPath.name),
-            XPProgress.empty(gameKey: GameType.passGuess.rawValue, gameName: GameType.passGuess.name),
-            XPProgress.empty(gameKey: GameType.tapInOrder.rawValue, gameName: GameType.tapInOrder.name),
-            XPProgress.empty(gameKey: GameType.colorTrap.rawValue, gameName: GameType.colorTrap.name),
-            XPProgress.empty(gameKey: GameType.spinBottle.rawValue, gameName: GameType.spinBottle.name)
         ]
         errorMessage = nil
         economyFeedback = nil

@@ -65,28 +65,6 @@ nonisolated struct StarTransactionRecord: Codable, Identifiable, Hashable, Senda
     }
 }
 
-nonisolated struct XPProgressRecord: Codable, Identifiable, Hashable, Sendable {
-    let id: UUID
-    let userID: UUID
-    let gameKey: String
-    let xp: Int
-    let matchesPlayed: Int
-    let wins: Int
-    let createdAt: Date?
-    let updatedAt: Date?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case userID = "user_id"
-        case gameKey = "game_key"
-        case xp
-        case matchesPlayed = "matches_played"
-        case wins
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
-}
-
 nonisolated struct GameTrialRecord: Codable, Identifiable, Hashable, Sendable {
     let id: UUID
     let userID: UUID
@@ -244,7 +222,6 @@ nonisolated struct GameResultRecord: Codable, Identifiable, Hashable, Sendable {
     let rank: Int
     let score: Int
     let starsAwarded: Int
-    let xpAwarded: Int
     let createdAt: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -254,7 +231,6 @@ nonisolated struct GameResultRecord: Codable, Identifiable, Hashable, Sendable {
         case rank
         case score
         case starsAwarded = "stars_awarded"
-        case xpAwarded = "xp_awarded"
         case createdAt = "created_at"
     }
 }
@@ -265,7 +241,6 @@ nonisolated struct GameResultUpsertRecord: Codable, Hashable, Sendable {
     let rank: Int
     let score: Int
     let starsAwarded: Int
-    let xpAwarded: Int
 
     enum CodingKeys: String, CodingKey {
         case sessionID = "session_id"
@@ -273,7 +248,6 @@ nonisolated struct GameResultUpsertRecord: Codable, Hashable, Sendable {
         case rank
         case score
         case starsAwarded = "stars_awarded"
-        case xpAwarded = "xp_awarded"
     }
 }
 
@@ -302,7 +276,6 @@ nonisolated struct SessionStateResultRecord: Codable, Hashable, Sendable {
     let score: Int
     let rank: Int
     let starsWon: Int
-    let xpWon: Int
 }
 
 nonisolated struct SessionStateLiveStateRecord: Codable, Hashable, Sendable {

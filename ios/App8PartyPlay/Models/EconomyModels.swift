@@ -248,8 +248,6 @@ nonisolated struct UserSubscription: Hashable, Sendable {
 
 nonisolated struct RewardPolicy: Hashable, Sendable {
     let gameKey: String
-    let xpForParticipation: Int
-    let xpForWin: Int
     let starsForParticipation: Int
     let starsForWin: Int
     let minimumMatchDurationSeconds: Int
@@ -257,16 +255,12 @@ nonisolated struct RewardPolicy: Hashable, Sendable {
 
     init(
         gameKey: String,
-        xpForParticipation: Int = 20,
-        xpForWin: Int = 50,
         starsForParticipation: Int = 0,
         starsForWin: Int = 0,
         minimumMatchDurationSeconds: Int = 30,
         minimumActionsRequired: Int = 1
     ) {
         self.gameKey = gameKey
-        self.xpForParticipation = xpForParticipation
-        self.xpForWin = xpForWin
         self.starsForParticipation = starsForParticipation
         self.starsForWin = starsForWin
         self.minimumMatchDurationSeconds = minimumMatchDurationSeconds
@@ -274,36 +268,6 @@ nonisolated struct RewardPolicy: Hashable, Sendable {
     }
 
     static let defaultPolicy = RewardPolicy(gameKey: "default")
-}
-
-nonisolated enum XPLevelCurve {
-    static func xpForLevel(_ level: Int) -> Int {
-        guard level > 1 else { return 0 }
-        return Int(pow(Double(level), 2.2) * 50)
-    }
-
-    static func levelForXP(_ xp: Int) -> Int {
-        guard xp > 0 else { return 1 }
-        var level = 1
-        while xpForLevel(level + 1) <= xp {
-            level += 1
-        }
-        return level
-    }
-
-    static func progressInLevel(xp: Int, level: Int) -> Double {
-        let currentLevelXP = xpForLevel(level)
-        let nextLevelXP = xpForLevel(level + 1)
-        let xpInLevel = xp - currentLevelXP
-        let xpNeeded = nextLevelXP - currentLevelXP
-        guard xpNeeded > 0 else { return 0 }
-        return min(1.0, Double(xpInLevel) / Double(xpNeeded))
-    }
-
-    static func xpToNextLevel(xp: Int, level: Int) -> Int {
-        let nextLevelXP = xpForLevel(level + 1)
-        return max(0, nextLevelXP - xp)
-    }
 }
 
 nonisolated enum PerformanceBadge: String, CaseIterable, Hashable, Sendable {

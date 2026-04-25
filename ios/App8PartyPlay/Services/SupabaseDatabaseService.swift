@@ -59,15 +59,6 @@ nonisolated final class SupabaseDatabaseService: Sendable {
         return WalletSnapshot(wallet: wallet, starTransactions: starTransactions)
     }
 
-    func fetchXPProgress(for userID: UUID) async throws -> [XPProgressRecord] {
-        (try? await service.client
-            .from("xp_progress")
-            .select()
-            .eq("user_id", value: userID)
-            .execute()
-            .value) ?? []
-    }
-
     func fetchGameTrials(for userID: UUID) async throws -> [GameTrialRecord] {
         (try? await service.client
             .from("game_trials")

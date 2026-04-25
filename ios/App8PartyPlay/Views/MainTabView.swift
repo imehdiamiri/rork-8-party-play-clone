@@ -1508,16 +1508,9 @@ struct ProfileView: View {
                     Spacer(minLength: 0)
                 }
 
-                if let progress = appModel.xpForGame(game.rawValue) {
-                    HStack(spacing: 8) {
-                        MetricChipView(title: "\(progress.matchesPlayed) played", systemImage: "gamecontroller.fill")
-                        MetricChipView(title: "\(progress.wins) wins", systemImage: "trophy.fill")
-                    }
-                } else {
-                    Text("Play this game to see your stats.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text("Tap below to start a new round.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }

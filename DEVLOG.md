@@ -70,6 +70,23 @@ supabase_final_production.sql
 
 Build بعد از پاکسازی: ✅ سبز.
 
+## 3.1 پاکسازی XP/Level (audit جدید)
+
+کل سیستم XP و Level Progress از پروژه حذف شد (به‌درخواست کاربر).
+
+**حذف کامل از این فایل‌ها:**
+- `Models/AppModels.swift` — `XPProgress` struct + فیلد `xpWon` از `GameResultRow`.
+- `Models/EconomyModels.swift` — `XPLevelCurve` enum و فیلدهای `xpForParticipation`/`xpForWin` از `RewardPolicy`.
+- `Models/SupabaseModels.swift` — `XPProgressRecord` struct، فیلد `xpAwarded` از `GameResultRecord`/`GameResultUpsertRecord`، فیلد `xpWon` از `SessionStateResultRecord`.
+- `Services/SharedResultBuilder.swift` — منطق xp.
+- `Services/SupabaseDatabaseService.swift` — متد `fetchXPProgress`.
+- `ViewModels/AppViewModel.swift` — property `xpProgress`، توابع `xpForGame`/`totalXP`/`globalLevel`/`updateXPAfterMatch`، تمام مقداردهی‌ها در `init`/`refreshDashboardData`/`applyGuestState`.
+- `Views/MainTabView.swift` — کارت آمار XP در `gameContextCard` (matches played / wins).
+
+> توجه: جدول `xp_progress` و ستون‌های `xp_awarded` در دیتابیس Supabase دست‌نخورده باقی مانده‌اند ولی توسط app نوشته/خوانده نمی‌شوند. در migration بعدی می‌توانند drop شوند.
+
+Build بعد از پاکسازی XP: ✅ سبز.
+
 ## 4. تاریخچه کامل توسعه (Git Log)
 
 ترتیب: قدیمی به جدید. ۵۹۰ commit.

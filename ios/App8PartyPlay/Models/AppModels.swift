@@ -444,33 +444,6 @@ nonisolated enum RoomAccess: String, CaseIterable, Identifiable, Hashable, Senda
     }
 }
 
-nonisolated struct XPProgress: Identifiable, Hashable, Sendable {
-    let id: String
-    let gameKey: String
-    let gameName: String
-    let xp: Int
-    let level: Int
-    let matchesPlayed: Int
-    let wins: Int
-
-    var levelProgress: Double {
-        XPLevelCurve.progressInLevel(xp: xp, level: level)
-    }
-
-    var xpToNext: Int {
-        XPLevelCurve.xpToNextLevel(xp: xp, level: level)
-    }
-
-    static func empty(gameKey: String, gameName: String) -> XPProgress {
-        XPProgress(id: gameKey, gameKey: gameKey, gameName: gameName, xp: 0, level: 1, matchesPlayed: 0, wins: 0)
-    }
-
-    static func fromXP(gameKey: String, gameName: String, xp: Int, matchesPlayed: Int, wins: Int) -> XPProgress {
-        let level = XPLevelCurve.levelForXP(xp)
-        return XPProgress(id: gameKey, gameKey: gameKey, gameName: gameName, xp: xp, level: level, matchesPlayed: matchesPlayed, wins: wins)
-    }
-}
-
 nonisolated struct GameRoom: Identifiable, Hashable, Sendable {
     let id: UUID
     let code: String
@@ -695,15 +668,13 @@ nonisolated struct GameResultRow: Identifiable, Hashable, Sendable {
     let score: Int
     let rank: Int
     let starsWon: Int
-    let xpWon: Int
 
-    init(id: UUID = UUID(), name: String, score: Int, rank: Int, starsWon: Int = 0, xpWon: Int = 0) {
+    init(id: UUID = UUID(), name: String, score: Int, rank: Int, starsWon: Int = 0) {
         self.id = id
         self.name = name
         self.score = score
         self.rank = rank
         self.starsWon = starsWon
-        self.xpWon = xpWon
     }
 }
 
