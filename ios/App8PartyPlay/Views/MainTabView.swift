@@ -700,17 +700,6 @@ struct FriendsView: View {
         }
     }
 
-    private var friendsHeader: some View {
-        HStack(alignment: .center, spacing: 10) {
-            Text("Friends")
-                .viralTitleStyle(size: 20, weight: .black)
-                .foregroundStyle(.white)
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            ProfileToolbarButton(systemImage: appModel.avatarSymbol, accessibilityLabel: "Profile", imageData: appModel.profileImageData, action: showProfile)
-        }
-    }
-
     private var offlineFriendsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             SectionHeaderView(title: "Offline Friends", subtitle: "Local names for Single Device games.")
