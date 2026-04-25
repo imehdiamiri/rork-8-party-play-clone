@@ -79,6 +79,8 @@ Every setup screen is built from reusable cards:
 - A final leaderboard screen with confetti + `Play Again` / `Exit` buttons.
 - Unfinished multi-device sessions recoverable if the app is killed mid-game.
 
+**Exception:** Reverse Singing has no setup, no rounds, no scoring, and no final leaderboard — it is a free-form 2-player audio toy with a persistent history list instead. None of the rules above apply to it except How-To-Play.
+
 ---
 
 ## 1. Reverse Singing — Free · Single Device · 2 players
@@ -875,10 +877,10 @@ No scoring — freeform.
 
 ## 12. Coin — Head & Tail (part of Party Tools, not a standalone game)
 
-This belongs to Party Tools but is described here for completeness because its bug was tied to the games section:
+This belongs to Party Tools but is described here for completeness:
 
-- The coin flip tool must actually flip between **Heads** and **Tails** (50/50). It currently always lands on Heads — that's a bug.
-- Heads and Tails use the two uploaded Rosh-8 PNGs (transparent backgrounds). Make sure both sides show on their own rotations, and the final visible face matches the random result.
+- The coin flip tool flips between **Heads** and **Tails** with a true 50/50 random result.
+- Heads and Tails use the two uploaded Rosh-8 PNGs (transparent backgrounds). Both sides render on their own rotations, and the final visible face matches the random result.
 
 ---
 

@@ -17,12 +17,13 @@ This document gives an overview of all 11 games. The app also has tools, cards, 
 - Dark mode only. Big tappable controls, native iOS feel, spring animations, haptics, and short SFX.
 - Some games are free forever, some are premium (locked behind subscription/paywall). Locked games still appear in the home grid with a transparent lock badge.
 
-## Game 1 — Reverse Singing (Free, Single Device, 2–30 players)
+## Game 1 — Reverse Singing (Free, Single Device, 2 players, Quick Play)
 
-- Pass-the-phone game. Each turn one player records a short voice clip (hum, sing, say a word).
-- The app plays the clip **reversed**. The player tries to mimic the reversed audio out loud with their own voice. The app then reverses the mimic recording, revealing whether it sounds like the original.
-- Flow: intro → record original (mic waveform + timer ~10s) → listen reversed → record imitation → play imitation reversed → everyone votes/laughs → pass phone.
-- Round duration ~75s. 3–5 turns by default. End screen shows clips list, lets players replay any comparison.
+- Pass-the-phone game for **exactly 2 players**. Tapping the card skips setup entirely and launches the session immediately.
+- Player 1 records a short voice clip (hum, sing, say a word). The app reverses it. Player 2 listens to the reversed clip and tries to mimic it out loud — the app then reverses Player 2's recording back, revealing whether it sounds like the original.
+- Buttons: Record / Play / Play Reverse / Slow (0.5×) for Player 1; Record Mimic / Play / Result / Share for Player 2.
+- Recording cap is **60 seconds**. No rounds, no voting, no scoring, no leaderboard, no rematch screen.
+- A persistent History card stores the last **20 sessions** in `UserDefaults` (`reverse_singing_history`) so players can replay or share any past mimic/result.
 
 ## Game 2 — Guess the Seconds (Free, Single Device, 2–30 players)
 
