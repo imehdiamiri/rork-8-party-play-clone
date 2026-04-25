@@ -49,7 +49,6 @@ final class AppViewModel {
     var activeSession: GameSession?
     var currentRoomAccess: RoomAccess = .privateRoom
     var invitedOnlineFriendIDs: Set<UUID> = []
-    var currentFakeAnswerSettings: FakeAnswerSettings = .default
     var currentImposterSettings: ImposterSettings? = nil
     var currentMemoryGridSettings: MemoryGridSettings? = nil
     var currentMemoryPathSettings: MemoryPathSettings? = nil
@@ -613,10 +612,6 @@ final class AppViewModel {
         lobbyNotice = access == .publicRoom ? "Public room enabled." : "Private room enabled."
     }
 
-    func updateFakeAnswerSettings(_ settings: FakeAnswerSettings) {
-        currentFakeAnswerSettings = settings
-    }
-
     func updatePassGuessSettings(_ settings: PassGuessSettings) {
         currentPassGuessSettings = settings
         if let session = activeSession,
@@ -1128,7 +1123,6 @@ final class AppViewModel {
                 latestFeedback: "Write your answer privately.",
                 results: session.results,
                 liveState: session.liveState,
-                fakeAnswerState: session.fakeAnswerState,
                 passGuessState: nextState
             )
         )
@@ -1179,7 +1173,6 @@ final class AppViewModel {
                 latestFeedback: session.latestFeedback,
                 results: session.results,
                 liveState: session.liveState,
-                fakeAnswerState: session.fakeAnswerState,
                 passGuessState: updatedState
             )
         )
@@ -1224,7 +1217,6 @@ final class AppViewModel {
                 latestFeedback: session.latestFeedback,
                 results: session.results,
                 liveState: session.liveState,
-                fakeAnswerState: session.fakeAnswerState,
                 passGuessState: updatedState
             )
         )
@@ -1270,7 +1262,6 @@ final class AppViewModel {
                     latestFeedback: "Guess who wrote each answer.",
                     results: session.results,
                     liveState: session.liveState,
-                    fakeAnswerState: session.fakeAnswerState,
                     passGuessState: nextState
                 )
             )
@@ -1304,7 +1295,6 @@ final class AppViewModel {
                     latestFeedback: "Round complete.",
                     results: session.results,
                     liveState: session.liveState,
-                    fakeAnswerState: session.fakeAnswerState,
                     passGuessState: leaderboardState
                 )
             )
@@ -1320,7 +1310,7 @@ final class AppViewModel {
                 players: session.players, rounds: session.rounds, currentRoundIndex: session.currentRoundIndex,
                 phase: .passToNextPlayer, secondsRemaining: session.game.roundDuration,
                 latestAwardedPoints: session.latestAwardedPoints, latestFeedback: session.latestFeedback,
-                results: session.results, liveState: RoundLiveState(), fakeAnswerState: session.fakeAnswerState, passGuessState: session.passGuessState
+                results: session.results, liveState: RoundLiveState(), passGuessState: session.passGuessState
             )
         )
     }
@@ -1477,7 +1467,7 @@ final class AppViewModel {
             phase: session.phase, secondsRemaining: session.secondsRemaining,
             latestAwardedPoints: session.latestAwardedPoints, latestFeedback: session.latestFeedback,
             results: session.results, liveState: session.liveState,
-            fakeAnswerState: session.fakeAnswerState, passGuessState: session.passGuessState,
+            passGuessState: session.passGuessState,
             guessTheSecondsState: session.guessTheSecondsState, memoryGridState: newState,
             memoryPathState: session.memoryPathState, tapInOrderState: session.tapInOrderState,
             colorTrapState: session.colorTrapState
@@ -1935,7 +1925,6 @@ final class AppViewModel {
     private func startSession(game: GameType, mode: GameMode, players: [PlayerProfile], roomCode: String?, roundCount: Int? = nil, sessionID: UUID? = nil, syncToPeers: Bool = true) {
         let rounds = buildRounds(game: game, players: players, roundCount: roundCount)
         let sessionID = sessionID ?? UUID()
-        let fakeAnswerState: FakeAnswerRoundState? = nil
         let passGuessState: PassGuessRoundState?
         if game.rawValue == GameType.passGuess.rawValue {
             let settings = PassGuessSettings(
@@ -2000,7 +1989,7 @@ final class AppViewModel {
             players: players, rounds: rounds, currentRoundIndex: 0,
             phase: .intro, secondsRemaining: game.rawValue == GameType.passGuess.rawValue ? 0 : game.roundDuration,
             latestAwardedPoints: 0, latestFeedback: "",
-            results: [], liveState: RoundLiveState(), fakeAnswerState: fakeAnswerState, passGuessState: passGuessState,
+            results: [], liveState: RoundLiveState(), passGuessState: passGuessState,
             guessTheSecondsState: guessTheSecondsState, memoryGridState: memoryGridState, memoryPathState: memoryPathState,
             tapInOrderState: tapInOrderState, colorTrapState: colorTrapState
         )
@@ -2135,8 +2124,7 @@ final class AppViewModel {
                         latestAwardedPoints: updatedSeconds == 0 ? 0 : session.latestAwardedPoints,
                         latestFeedback: updatedSeconds == 0 ? "Time ran out." : session.latestFeedback,
                         results: session.results,
-                        liveState: RoundLiveState(guessText: session.liveState.guessText, hasStartedTiming: session.liveState.hasStartedTiming, measuredElapsedTime: updatedElapsed, hasSubmittedTiming: session.liveState.hasSubmittedTiming, promptVisibleToPerformer: session.liveState.promptVisibleToPerformer),
-                        fakeAnswerState: session.fakeAnswerState
+                        liveState: RoundLiveState(guessText: session.liveState.guessText, hasStartedTiming: session.liveState.hasStartedTiming, measuredElapsedTime: updatedElapsed, hasSubmittedTiming: session.liveState.hasSubmittedTiming, promptVisibleToPerformer: session.liveState.promptVisibleToPerformer)
                     )
                 )
                 if updatedSeconds == 0 { return }
@@ -2177,7 +2165,7 @@ final class AppViewModel {
         return generatedRounds
     }
 
-    private func updateSession(copying session: GameSession, phase: MatchPhase? = nil, secondsRemaining: Int? = nil, latestAwardedPoints: Int? = nil, latestFeedback: String? = nil, players: [PlayerProfile]? = nil, results: [GameResultRow]? = nil, fakeAnswerState: FakeAnswerRoundState? = nil, passGuessState: PassGuessRoundState? = nil, guessTheSecondsState: GuessTheSecondsGameState? = nil, memoryGridState: MemoryGridGameState? = nil, memoryPathState: MemoryPathGameState? = nil, tapInOrderState: TapInOrderGameState? = nil, colorTrapState: ColorTrapGameState? = nil, rematchPlayerIDs: [UUID]? = nil) {
+    private func updateSession(copying session: GameSession, phase: MatchPhase? = nil, secondsRemaining: Int? = nil, latestAwardedPoints: Int? = nil, latestFeedback: String? = nil, players: [PlayerProfile]? = nil, results: [GameResultRow]? = nil, passGuessState: PassGuessRoundState? = nil, guessTheSecondsState: GuessTheSecondsGameState? = nil, memoryGridState: MemoryGridGameState? = nil, memoryPathState: MemoryPathGameState? = nil, tapInOrderState: TapInOrderGameState? = nil, colorTrapState: ColorTrapGameState? = nil, rematchPlayerIDs: [UUID]? = nil) {
         updateSession(
             GameSession(
                 id: session.id,
@@ -2193,7 +2181,6 @@ final class AppViewModel {
                 latestFeedback: latestFeedback ?? session.latestFeedback,
                 results: results ?? session.results,
                 liveState: session.liveState,
-                fakeAnswerState: fakeAnswerState ?? session.fakeAnswerState,
                 passGuessState: passGuessState ?? session.passGuessState,
                 guessTheSecondsState: guessTheSecondsState ?? session.guessTheSecondsState,
                 memoryGridState: memoryGridState ?? session.memoryGridState,
@@ -2324,7 +2311,6 @@ final class AppViewModel {
                 latestFeedback: "Reveal ready.",
                 results: session.results,
                 liveState: session.liveState,
-                fakeAnswerState: session.fakeAnswerState,
                 passGuessState: revealState
             )
         )
@@ -2360,7 +2346,6 @@ final class AppViewModel {
                 latestFeedback: "",
                 results: session.results,
                 liveState: session.liveState,
-                fakeAnswerState: session.fakeAnswerState,
                 passGuessState: nextState
             )
         )
@@ -2378,7 +2363,7 @@ final class AppViewModel {
             phase: session.phase, secondsRemaining: session.secondsRemaining,
             latestAwardedPoints: session.latestAwardedPoints, latestFeedback: session.latestFeedback,
             results: session.results, liveState: session.liveState,
-            fakeAnswerState: session.fakeAnswerState, passGuessState: session.passGuessState,
+            passGuessState: session.passGuessState,
             guessTheSecondsState: session.guessTheSecondsState, memoryGridState: session.memoryGridState,
             memoryPathState: session.memoryPathState, tapInOrderState: session.tapInOrderState,
             colorTrapState: session.colorTrapState, rematchPlayerIDs: session.rematchPlayerIDs,
@@ -2425,18 +2410,6 @@ final class AppViewModel {
             latestFeedback: session.latestFeedback,
             results: session.results.map { SessionStateResultRecord(id: $0.id, name: $0.name, score: $0.score, rank: $0.rank, starsWon: $0.starsWon) },
             liveState: SessionStateLiveStateRecord(guessText: session.liveState.guessText, hasStartedTiming: session.liveState.hasStartedTiming, measuredElapsedTime: session.liveState.measuredElapsedTime, hasSubmittedTiming: session.liveState.hasSubmittedTiming, promptVisibleToPerformer: session.liveState.promptVisibleToPerformer),
-            fakeAnswerState: session.fakeAnswerState.map { state in
-                SessionStateFakeAnswerRoundStateRecord(
-                    settings: SessionStateFakeAnswerSettingsRecord(rounds: state.settings.rounds, answerTime: state.settings.answerTime, voteTime: state.settings.voteTime, questionPack: state.settings.questionPack.rawValue),
-                    phase: state.phase.rawValue,
-                    question: SessionStateFakeAnswerQuestionRecord(id: state.question.id, prompt: state.question.prompt, realAnswer: state.question.realAnswer, category: state.question.category),
-                    submissions: state.submissions.map { SessionStateFakeAnswerSubmissionRecord(id: $0.id, playerID: $0.playerID, answer: $0.answer) },
-                    options: state.options.map { SessionStateFakeAnswerOptionRecord(id: $0.id, text: $0.text, isReal: $0.isReal, authorID: $0.authorID) },
-                    votes: state.votes.map { SessionStateFakeAnswerVoteRecord(id: $0.id, playerID: $0.playerID, optionID: $0.optionID) },
-                    scoreEvents: state.scoreEvents.map { SessionStateFakeAnswerScoreEventRecord(id: $0.id, playerID: $0.playerID, title: $0.title, points: $0.points) },
-                    revealItems: state.revealItems.map { SessionStateFakeAnswerRevealItemRecord(id: $0.id, optionID: $0.optionID, optionText: $0.optionText, authorName: $0.authorName, voteCount: $0.voteCount, isReal: $0.isReal) }
-                )
-            },
             passGuessState: session.passGuessState.map { state in
                 SessionStatePassGuessRoundStateRecord(
                     settings: SessionStatePassGuessSettingsRecord(rounds: state.settings.rounds, questionMode: state.settings.questionMode.rawValue, selectedQuestionID: state.settings.selectedQuestionID, customQuestion: state.settings.customQuestion, answerTimeLimit: state.settings.answerTimeLimit, guessTimeLimit: state.settings.guessTimeLimit),
@@ -2554,18 +2527,6 @@ final class AppViewModel {
             latestFeedback: state.latestFeedback,
             results: state.results.map { GameResultRow(id: $0.id, name: $0.name, score: $0.score, rank: $0.rank, starsWon: $0.starsWon) },
             liveState: RoundLiveState(guessText: state.liveState.guessText, hasStartedTiming: state.liveState.hasStartedTiming, measuredElapsedTime: state.liveState.measuredElapsedTime, hasSubmittedTiming: state.liveState.hasSubmittedTiming, promptVisibleToPerformer: state.liveState.promptVisibleToPerformer),
-            fakeAnswerState: state.fakeAnswerState.map { fakeState in
-                FakeAnswerRoundState(
-                    settings: FakeAnswerSettings(rounds: fakeState.settings.rounds, answerTime: fakeState.settings.answerTime, voteTime: fakeState.settings.voteTime, questionPack: FakeAnswerQuestionPack(rawValue: fakeState.settings.questionPack) ?? .random),
-                    phase: FakeAnswerRoundPhase(rawValue: fakeState.phase) ?? .intro,
-                    question: FakeAnswerQuestion(id: fakeState.question.id, prompt: fakeState.question.prompt, realAnswer: fakeState.question.realAnswer, category: fakeState.question.category),
-                    submissions: fakeState.submissions.map { FakeAnswerSubmission(id: $0.id, playerID: $0.playerID, answer: $0.answer) },
-                    options: fakeState.options.map { FakeAnswerOption(id: $0.id, text: $0.text, isReal: $0.isReal, authorID: $0.authorID) },
-                    votes: fakeState.votes.map { FakeAnswerVote(id: $0.id, playerID: $0.playerID, optionID: $0.optionID) },
-                    scoreEvents: fakeState.scoreEvents.map { FakeAnswerScoreEvent(id: $0.id, playerID: $0.playerID, title: $0.title, points: $0.points) },
-                    revealItems: fakeState.revealItems.map { FakeAnswerRevealItem(id: $0.id, optionID: $0.optionID, optionText: $0.optionText, authorName: $0.authorName, voteCount: $0.voteCount, isReal: $0.isReal) }
-                )
-            },
             passGuessState: state.passGuessState.map { passGuessState in
                 PassGuessRoundState(
                     settings: PassGuessSettings(rounds: passGuessState.settings.rounds, questionMode: PassGuessQuestionMode(rawValue: passGuessState.settings.questionMode) ?? .predefined, selectedQuestionID: passGuessState.settings.selectedQuestionID, customQuestion: passGuessState.settings.customQuestion, answerTimeLimit: passGuessState.settings.answerTimeLimit, guessTimeLimit: passGuessState.settings.guessTimeLimit),
@@ -2703,7 +2664,6 @@ final class AppViewModel {
         inviteCode = ""
         inviteTotalCount = 0
         inviteStarsEarned = 0
-        currentFakeAnswerSettings = .default
         currentImposterSettings = nil
         currentMemoryGridSettings = nil
         currentMemoryPathSettings = nil

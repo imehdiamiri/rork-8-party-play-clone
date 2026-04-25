@@ -414,7 +414,6 @@ struct TeamSetupView: View {
 
         guard appModel.activeSession?.roomCode != room.code else { return }
 
-        appModel.currentFakeAnswerSettings = casualVM.fakeAnswerSettings
         appModel.startCasualMultiplayerSession(
             game: room.gameType,
             mode: room.playMode,

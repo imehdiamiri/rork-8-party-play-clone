@@ -173,7 +173,6 @@ nonisolated struct CasualRoom: Identifiable, Hashable, Sendable {
     let maxPlayers: Int
     let minPlayers: Int
     let createdAt: Date
-    let settings: FakeAnswerSettings
     let playMode: GameMode
     let teamState: TeamState?
 
@@ -186,7 +185,6 @@ nonisolated struct CasualRoom: Identifiable, Hashable, Sendable {
         maxPlayers: Int? = nil,
         minPlayers: Int? = nil,
         createdAt: Date = Date(),
-        settings: FakeAnswerSettings = .default,
         playMode: GameMode = .multiDevice,
         teamState: TeamState? = nil
     ) {
@@ -198,7 +196,6 @@ nonisolated struct CasualRoom: Identifiable, Hashable, Sendable {
         self.maxPlayers = maxPlayers ?? gameType.maxPlayers
         self.minPlayers = minPlayers ?? gameType.minPlayers
         self.createdAt = createdAt
-        self.settings = settings
         self.playMode = playMode
         self.teamState = teamState
     }
@@ -224,10 +221,6 @@ nonisolated struct CasualRoomStatePayload: Codable, Hashable, Sendable {
     let maxPlayers: Int
     let minPlayers: Int
     let createdAt: Double
-    let settingsRounds: Int
-    let settingsAnswerTime: Int
-    let settingsVoteTime: Int
-    let settingsQuestionPack: String
     let playMode: String
     let teamState: TeamState?
 
@@ -240,10 +233,6 @@ nonisolated struct CasualRoomStatePayload: Codable, Hashable, Sendable {
         self.maxPlayers = room.maxPlayers
         self.minPlayers = room.minPlayers
         self.createdAt = room.createdAt.timeIntervalSince1970
-        self.settingsRounds = room.settings.rounds
-        self.settingsAnswerTime = room.settings.answerTime
-        self.settingsVoteTime = room.settings.voteTime
-        self.settingsQuestionPack = room.settings.questionPack.rawValue
         self.playMode = room.playMode.rawValue
         self.teamState = room.teamState
     }
@@ -252,12 +241,6 @@ nonisolated struct CasualRoomStatePayload: Codable, Hashable, Sendable {
         guard let uuid = UUID(uuidString: roomId) else { return nil }
         let guestPlayers = players.compactMap { $0.toGuestPlayer() }
         let roomStatus = CasualRoomStatus(rawValue: status) ?? .waiting
-        let settings = FakeAnswerSettings(
-            rounds: settingsRounds,
-            answerTime: settingsAnswerTime,
-            voteTime: settingsVoteTime,
-            questionPack: FakeAnswerQuestionPack(rawValue: settingsQuestionPack) ?? .random
-        )
         let resolvedPlayMode = GameMode(rawValue: playMode) ?? .multiDevice
         return CasualRoom(
             id: uuid,
@@ -268,7 +251,6 @@ nonisolated struct CasualRoomStatePayload: Codable, Hashable, Sendable {
             maxPlayers: maxPlayers,
             minPlayers: minPlayers,
             createdAt: Date(timeIntervalSince1970: createdAt),
-            settings: settings,
             playMode: resolvedPlayMode,
             teamState: resolvedPlayMode == .teamMode ? teamState : nil
         )

@@ -286,101 +286,6 @@ nonisolated struct SessionStateLiveStateRecord: Codable, Hashable, Sendable {
     let promptVisibleToPerformer: Bool
 }
 
-nonisolated struct SessionStateFakeAnswerQuestionRecord: Codable, Hashable, Sendable {
-    let id: UUID
-    let prompt: String
-    let realAnswer: String
-    let category: String
-}
-
-nonisolated struct SessionStateFakeAnswerSettingsRecord: Codable, Hashable, Sendable {
-    let rounds: Int
-    let answerTime: Int
-    let voteTime: Int
-    let questionPack: String
-}
-
-nonisolated struct SessionStateFakeAnswerSubmissionRecord: Codable, Hashable, Sendable {
-    let id: UUID
-    let playerID: UUID
-    let answer: String
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case playerID = "player_id"
-        case answer
-    }
-}
-
-nonisolated struct SessionStateFakeAnswerOptionRecord: Codable, Hashable, Sendable {
-    let id: UUID
-    let text: String
-    let isReal: Bool
-    let authorID: UUID?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case text
-        case isReal = "is_real"
-        case authorID = "author_id"
-    }
-}
-
-nonisolated struct SessionStateFakeAnswerVoteRecord: Codable, Hashable, Sendable {
-    let id: UUID
-    let playerID: UUID
-    let optionID: UUID
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case playerID = "player_id"
-        case optionID = "option_id"
-    }
-}
-
-nonisolated struct SessionStateFakeAnswerScoreEventRecord: Codable, Hashable, Sendable {
-    let id: UUID
-    let playerID: UUID
-    let title: String
-    let points: Int
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case playerID = "player_id"
-        case title
-        case points
-    }
-}
-
-nonisolated struct SessionStateFakeAnswerRevealItemRecord: Codable, Hashable, Sendable {
-    let id: UUID
-    let optionID: UUID
-    let optionText: String
-    let authorName: String
-    let voteCount: Int
-    let isReal: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case optionID = "option_id"
-        case optionText = "option_text"
-        case authorName = "author_name"
-        case voteCount = "vote_count"
-        case isReal = "is_real"
-    }
-}
-
-nonisolated struct SessionStateFakeAnswerRoundStateRecord: Codable, Hashable, Sendable {
-    let settings: SessionStateFakeAnswerSettingsRecord
-    let phase: String
-    let question: SessionStateFakeAnswerQuestionRecord
-    let submissions: [SessionStateFakeAnswerSubmissionRecord]
-    let options: [SessionStateFakeAnswerOptionRecord]
-    let votes: [SessionStateFakeAnswerVoteRecord]
-    let scoreEvents: [SessionStateFakeAnswerScoreEventRecord]
-    let revealItems: [SessionStateFakeAnswerRevealItemRecord]
-}
-
 nonisolated struct SessionStatePassGuessSettingsRecord: Codable, Hashable, Sendable {
     let rounds: Int
     let questionMode: String
@@ -790,7 +695,6 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
     let latestFeedback: String
     let results: [SessionStateResultRecord]
     let liveState: SessionStateLiveStateRecord
-    let fakeAnswerState: SessionStateFakeAnswerRoundStateRecord?
     let passGuessState: SessionStatePassGuessRoundStateRecord?
     let guessTheSecondsState: SessionStateGuessTheSecondsRecord?
     let memoryGridState: SessionStateMemoryGridRecord?
@@ -813,7 +717,6 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
         latestFeedback: String,
         results: [SessionStateResultRecord],
         liveState: SessionStateLiveStateRecord,
-        fakeAnswerState: SessionStateFakeAnswerRoundStateRecord? = nil,
         passGuessState: SessionStatePassGuessRoundStateRecord? = nil,
         guessTheSecondsState: SessionStateGuessTheSecondsRecord? = nil,
         memoryGridState: SessionStateMemoryGridRecord? = nil,
@@ -835,7 +738,6 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
         self.latestFeedback = latestFeedback
         self.results = results
         self.liveState = liveState
-        self.fakeAnswerState = fakeAnswerState
         self.passGuessState = passGuessState
         self.guessTheSecondsState = guessTheSecondsState
         self.memoryGridState = memoryGridState
@@ -859,7 +761,6 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
         case latestFeedback
         case results
         case liveState
-        case fakeAnswerState = "fake_answer_state"
         case passGuessState = "pass_guess_state"
         case guessTheSecondsState = "guess_the_seconds_state"
         case memoryGridState = "memory_grid_state"
@@ -884,7 +785,6 @@ nonisolated struct SessionStateRecord: Codable, Hashable, Sendable {
         latestFeedback = try c.decode(String.self, forKey: .latestFeedback)
         results = try c.decode([SessionStateResultRecord].self, forKey: .results)
         liveState = try c.decode(SessionStateLiveStateRecord.self, forKey: .liveState)
-        fakeAnswerState = try c.decodeIfPresent(SessionStateFakeAnswerRoundStateRecord.self, forKey: .fakeAnswerState)
         passGuessState = try c.decodeIfPresent(SessionStatePassGuessRoundStateRecord.self, forKey: .passGuessState)
         guessTheSecondsState = try c.decodeIfPresent(SessionStateGuessTheSecondsRecord.self, forKey: .guessTheSecondsState)
         memoryGridState = try c.decodeIfPresent(SessionStateMemoryGridRecord.self, forKey: .memoryGridState)

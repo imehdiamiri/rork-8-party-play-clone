@@ -678,153 +678,6 @@ nonisolated struct GameResultRow: Identifiable, Hashable, Sendable {
     }
 }
 
-nonisolated enum FakeAnswerQuestionPack: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case random
-    case themed
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .random: return "Random"
-        case .themed: return "Themed"
-        }
-    }
-}
-
-nonisolated struct FakeAnswerSettings: Hashable, Sendable {
-    let rounds: Int
-    let answerTime: Int
-    let voteTime: Int
-    let questionPack: FakeAnswerQuestionPack
-
-    static let `default` = FakeAnswerSettings(rounds: 5, answerTime: 30, voteTime: 20, questionPack: .random)
-}
-
-nonisolated enum FakeAnswerRoundPhase: String, Hashable, Sendable {
-    case questionEntry
-    case intro
-    case answering
-    case voting
-    case reveal
-    case leaderboard
-}
-
-nonisolated struct FakeAnswerQuestion: Hashable, Sendable {
-    let id: UUID
-    let prompt: String
-    let realAnswer: String
-    let category: String
-
-    init(id: UUID = UUID(), prompt: String, realAnswer: String, category: String) {
-        self.id = id
-        self.prompt = prompt
-        self.realAnswer = realAnswer
-        self.category = category
-    }
-}
-
-nonisolated struct FakeAnswerSubmission: Identifiable, Hashable, Sendable {
-    let id: UUID
-    let playerID: UUID
-    let answer: String
-
-    init(id: UUID = UUID(), playerID: UUID, answer: String) {
-        self.id = id
-        self.playerID = playerID
-        self.answer = answer
-    }
-}
-
-nonisolated struct FakeAnswerOption: Identifiable, Hashable, Sendable {
-    let id: UUID
-    let text: String
-    let isReal: Bool
-    let authorID: UUID?
-
-    init(id: UUID = UUID(), text: String, isReal: Bool, authorID: UUID?) {
-        self.id = id
-        self.text = text
-        self.isReal = isReal
-        self.authorID = authorID
-    }
-}
-
-nonisolated struct FakeAnswerVote: Identifiable, Hashable, Sendable {
-    let id: UUID
-    let playerID: UUID
-    let optionID: UUID
-
-    init(id: UUID = UUID(), playerID: UUID, optionID: UUID) {
-        self.id = id
-        self.playerID = playerID
-        self.optionID = optionID
-    }
-}
-
-nonisolated struct FakeAnswerScoreEvent: Identifiable, Hashable, Sendable {
-    let id: UUID
-    let playerID: UUID
-    let title: String
-    let points: Int
-
-    init(id: UUID = UUID(), playerID: UUID, title: String, points: Int) {
-        self.id = id
-        self.playerID = playerID
-        self.title = title
-        self.points = points
-    }
-}
-
-nonisolated struct FakeAnswerRevealItem: Identifiable, Hashable, Sendable {
-    let id: UUID
-    let optionID: UUID
-    let optionText: String
-    let authorName: String
-    let voteCount: Int
-    let isReal: Bool
-
-    init(id: UUID = UUID(), optionID: UUID, optionText: String, authorName: String, voteCount: Int, isReal: Bool) {
-        self.id = id
-        self.optionID = optionID
-        self.optionText = optionText
-        self.authorName = authorName
-        self.voteCount = voteCount
-        self.isReal = isReal
-    }
-}
-
-nonisolated struct FakeAnswerRoundState: Hashable, Sendable {
-    let settings: FakeAnswerSettings
-    let phase: FakeAnswerRoundPhase
-    let question: FakeAnswerQuestion
-    let submissions: [FakeAnswerSubmission]
-    let options: [FakeAnswerOption]
-    let votes: [FakeAnswerVote]
-    let scoreEvents: [FakeAnswerScoreEvent]
-    let revealItems: [FakeAnswerRevealItem]
-
-    init(
-        settings: FakeAnswerSettings,
-        phase: FakeAnswerRoundPhase,
-        question: FakeAnswerQuestion,
-        submissions: [FakeAnswerSubmission] = [],
-        options: [FakeAnswerOption] = [],
-        votes: [FakeAnswerVote] = [],
-        scoreEvents: [FakeAnswerScoreEvent] = [],
-        revealItems: [FakeAnswerRevealItem] = []
-    ) {
-        self.settings = settings
-        self.phase = phase
-        self.question = question
-        self.submissions = submissions
-        self.options = options
-        self.votes = votes
-        self.scoreEvents = scoreEvents
-        self.revealItems = revealItems
-    }
-}
-
 nonisolated struct PassGuessSettings: Hashable, Sendable {
     let rounds: Int
     let questionMode: PassGuessQuestionMode
@@ -1158,7 +1011,6 @@ nonisolated struct GameSession: Identifiable, Hashable, Sendable {
     let latestFeedback: String
     let results: [GameResultRow]
     let liveState: RoundLiveState
-    let fakeAnswerState: FakeAnswerRoundState?
     let passGuessState: PassGuessRoundState?
     let guessTheSecondsState: GuessTheSecondsGameState?
     let memoryGridState: MemoryGridGameState?
@@ -1182,7 +1034,6 @@ nonisolated struct GameSession: Identifiable, Hashable, Sendable {
         latestFeedback: String,
         results: [GameResultRow],
         liveState: RoundLiveState = RoundLiveState(),
-        fakeAnswerState: FakeAnswerRoundState? = nil,
         passGuessState: PassGuessRoundState? = nil,
         guessTheSecondsState: GuessTheSecondsGameState? = nil,
         memoryGridState: MemoryGridGameState? = nil,
@@ -1205,7 +1056,6 @@ nonisolated struct GameSession: Identifiable, Hashable, Sendable {
         self.latestFeedback = latestFeedback
         self.results = results
         self.liveState = liveState
-        self.fakeAnswerState = fakeAnswerState
         self.passGuessState = passGuessState
         self.guessTheSecondsState = guessTheSecondsState
         self.memoryGridState = memoryGridState

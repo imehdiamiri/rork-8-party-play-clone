@@ -42,7 +42,7 @@ final class CasualRoomService {
         self.supabase = supabase
     }
 
-    func createRoom(gameType: GameType, host: GuestPlayer, settings: FakeAnswerSettings) async throws -> CasualRoom {
+    func createRoom(gameType: GameType, host: GuestPlayer) async throws -> CasualRoom {
         let maxRetries = 3
         var lastError: Error?
 
@@ -60,10 +60,10 @@ final class CasualRoomService {
                 "p_host_display_name": .string(host.displayName),
                 "p_max_players": .integer(gameType.maxPlayers),
                 "p_min_players": .integer(gameType.minPlayers),
-                "p_settings_rounds": .integer(settings.rounds),
-                "p_settings_answer_time": .integer(settings.answerTime),
-                "p_settings_vote_time": .integer(settings.voteTime),
-                "p_settings_question_pack": .string(settings.questionPack.rawValue)
+                "p_settings_rounds": .integer(0),
+                "p_settings_answer_time": .integer(0),
+                "p_settings_vote_time": .integer(0),
+                "p_settings_question_pack": .string("random")
             ]
 
             let response: CasualRPCResponse = try await supabase.client
@@ -80,7 +80,7 @@ final class CasualRoomService {
             }
 
             await joinChannelBestEffort(code: code)
-            return try await fetchRoom(roomID: roomID, gameType: gameType, settings: settings)
+            return try await fetchRoom(roomID: roomID, gameType: gameType)
         }
 
         throw lastError ?? CasualRoomError.databaseError("Failed to create room after \(maxRetries) attempts.")
@@ -131,14 +131,8 @@ final class CasualRoomService {
             .value
 
         let gameType = GameType(rawValue: roomRecord.gameType)
-        let settings = FakeAnswerSettings(
-            rounds: roomRecord.settingsRounds,
-            answerTime: roomRecord.settingsAnswerTime,
-            voteTime: roomRecord.settingsVoteTime,
-            questionPack: FakeAnswerQuestionPack(rawValue: roomRecord.settingsQuestionPack) ?? .random
-        )
 
-        return try await fetchRoom(roomID: roomID, gameType: gameType, settings: settings)
+        return try await fetchRoom(roomID: roomID, gameType: gameType)
     }
 
     func fetchRoomFromDB(roomID: UUID) async throws -> (CasualRoomRecord, [CasualRoomPlayerRecord]) {
@@ -161,7 +155,7 @@ final class CasualRoomService {
         return (roomRecord, playerRecords)
     }
 
-    func fetchRoom(roomID: UUID, gameType: GameType, settings: FakeAnswerSettings) async throws -> CasualRoom {
+    func fetchRoom(roomID: UUID, gameType: GameType) async throws -> CasualRoom {
         let (roomRecord, playerRecords) = try await fetchRoomFromDB(roomID: roomID)
         let players = playerRecords.map { $0.toGuestPlayer() }
         let status = CasualRoomStatus(rawValue: roomRecord.status) ?? .waiting
@@ -174,8 +168,7 @@ final class CasualRoomService {
             status: status,
             maxPlayers: roomRecord.maxPlayers,
             minPlayers: roomRecord.minPlayers,
-            createdAt: roomRecord.createdAt ?? Date(),
-            settings: settings
+            createdAt: roomRecord.createdAt ?? Date()
         )
     }
 
@@ -221,28 +214,6 @@ final class CasualRoomService {
         if let error = response.error {
             throw CasualRoomError.databaseError(error)
         }
-    }
-
-    func updateRoomSettings(roomID: UUID, settings: FakeAnswerSettings, hostSessionToken: String) async throws {
-        let params: [String: AnyJSON] = [
-            "p_room_id": .string(roomID.uuidString),
-            "p_host_session_token": .string(hostSessionToken),
-            "p_rounds": .integer(settings.rounds),
-            "p_answer_time": .integer(settings.answerTime),
-            "p_vote_time": .integer(settings.voteTime),
-            "p_question_pack": .string(settings.questionPack.rawValue)
-        ]
-
-        let response: CasualRPCResponse = try await supabase.client
-            .rpc("casual_update_room_settings", params: params)
-            .execute()
-            .value
-
-        if let error = response.error {
-            throw CasualRoomError.databaseError(error)
-        }
-
-        await notifyRoomUpdate()
     }
 
     func clearAllReady(roomID: UUID, hostSessionToken: String) async {
@@ -429,14 +400,8 @@ final class CasualRoomService {
         guard let roomRecord = roomRecords.first else { return nil }
 
         let gameType = GameType(rawValue: roomRecord.gameType)
-        let settings = FakeAnswerSettings(
-            rounds: roomRecord.settingsRounds,
-            answerTime: roomRecord.settingsAnswerTime,
-            voteTime: roomRecord.settingsVoteTime,
-            questionPack: FakeAnswerQuestionPack(rawValue: roomRecord.settingsQuestionPack) ?? .random
-        )
 
-        let room = try await fetchRoom(roomID: roomRecord.id, gameType: gameType, settings: settings)
+        let room = try await fetchRoom(roomID: roomRecord.id, gameType: gameType)
         let player = playerRecord.toGuestPlayer()
 
         await joinChannelBestEffort(code: roomRecord.roomCode)
@@ -480,8 +445,7 @@ final class CasualRoomService {
             status: .starting,
             maxPlayers: room.maxPlayers,
             minPlayers: room.minPlayers,
-            createdAt: room.createdAt,
-            settings: room.settings
+            createdAt: room.createdAt
         )
         let payload = CasualRoomStatePayload(from: updatedRoom)
         try? await channel?.broadcast(event: CasualBroadcastEvent.gameStarting.rawValue, message: payload)

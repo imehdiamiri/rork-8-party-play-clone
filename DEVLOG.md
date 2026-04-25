@@ -87,6 +87,23 @@ Build بعد از پاکسازی: ✅ سبز.
 
 Build بعد از پاکسازی XP: ✅ سبز.
 
+## 3.2 پاکسازی FakeAnswer (audit جدید)
+
+بازی «Guess the Fake Answer» در commit‌های قدیمی اضافه و سپس حذف شده بود، ولی ~۱۰۹ ارجاع به ساختارهای `FakeAnswer*` در کد باقی مانده بود (مدل‌ها، رکوردهای Supabase، state‌های `AppViewModel` و `CasualRoom` settings). همه‌ی این کدها مرده بودند و توسط هیچ بازی فعلی استفاده نمی‌شدند.
+
+**حذف کامل از این فایل‌ها:**
+- `Models/AppModels.swift` — `FakeAnswerQuestionPack`, `FakeAnswerSettings`, `FakeAnswerRoundPhase`, `FakeAnswerQuestion`, `FakeAnswerSubmission`, `FakeAnswerOption`, `FakeAnswerVote`, `FakeAnswerScoreEvent`, `FakeAnswerRevealItem`, `FakeAnswerRoundState` + فیلد `fakeAnswerState` از `GameSession`.
+- `Models/SupabaseModels.swift` — تمام `SessionStateFakeAnswer*Record` ها + فیلد `fakeAnswerState` از `SessionStateRecord` و کلید `fake_answer_state` از CodingKeys.
+- `Models/CasualRoomModels.swift` — فیلد `settings: FakeAnswerSettings` از `CasualRoom`، فیلدهای `settingsRounds/settingsAnswerTime/settingsVoteTime/settingsQuestionPack` از `CasualRoomStatePayload`.
+- `Services/CasualRoomService.swift` — پارامتر `settings` از `createRoom`/`fetchRoom`، حذف کامل `updateRoomSettings`. RPC `casual_create_room` همچنان مقادیر دیفالت (`0`/`"random"`) دریافت می‌کند تا با schema موجود سازگار باشد.
+- `ViewModels/AppViewModel.swift` — property `currentFakeAnswerSettings`، تابع `updateFakeAnswerSettings`، پارامتر `fakeAnswerState` از `updateSession`، تمام جایگذاری‌ها در ساخت `GameSession`/`SessionStateRecord`.
+- `ViewModels/CasualRoomViewModel.swift` — property `fakeAnswerSettings`، تابع `updateSettings`، تمام مقداردهی‌ها در rejoin/refresh/createRoom/broadcastTeamState.
+- `Views/TeamSetupView.swift` — خط `appModel.currentFakeAnswerSettings = casualVM.fakeAnswerSettings`.
+
+> توجه: ستون‌های `settings_rounds/settings_answer_time/settings_vote_time/settings_question_pack` در جدول `casual_rooms` و RPC `casual_update_room_settings` در دیتابیس Supabase دست‌نخورده باقی مانده‌اند. در migration بعدی می‌توانند drop شوند.
+
+Build بعد از پاکسازی FakeAnswer: ✅ سبز.
+
 ## 4. تاریخچه کامل توسعه (Git Log)
 
 ترتیب: قدیمی به جدید. ۵۹۰ commit.

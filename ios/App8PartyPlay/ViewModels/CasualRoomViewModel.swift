@@ -24,7 +24,6 @@ final class CasualRoomViewModel {
     var readyCheckActive: Bool = false
     var readyCheckLocalConfirmed: Bool = false
     var readyConfirmedPlayerIDs: Set<UUID> = []
-    var fakeAnswerSettings: FakeAnswerSettings = .default
     var teamState: TeamState = .default
     var playMode: GameMode = .multiDevice
     var onSessionEnded: (() -> Void)?
@@ -121,7 +120,6 @@ final class CasualRoomViewModel {
                 room = rejoinedRoom
                 localPlayer = player
                 isConnected = true
-                fakeAnswerSettings = rejoinedRoom.settings
                 setupCallbacks()
                 roomService.startHeartbeat(roomID: rejoinedRoom.id, sessionToken: token)
             } catch {
@@ -161,8 +159,7 @@ final class CasualRoomViewModel {
             do {
                 let created = try await roomService.createRoom(
                     gameType: gameType,
-                    host: host,
-                    settings: fakeAnswerSettings
+                    host: host
                 )
                 room = created
                 isConnected = true
@@ -353,7 +350,6 @@ final class CasualRoomViewModel {
             maxPlayers: room.maxPlayers,
             minPlayers: room.minPlayers,
             createdAt: room.createdAt,
-            settings: room.settings,
             playMode: playMode,
             teamState: playMode == .teamMode ? teamState : nil
         )
@@ -421,7 +417,6 @@ final class CasualRoomViewModel {
             maxPlayers: room.maxPlayers,
             minPlayers: room.minPlayers,
             createdAt: room.createdAt,
-            settings: room.settings,
             playMode: playMode,
             teamState: teamState
         )
@@ -483,33 +478,6 @@ final class CasualRoomViewModel {
         // Don't reset them here or the notification alerts never appear.
     }
 
-    func updateSettings(_ settings: FakeAnswerSettings) {
-        fakeAnswerSettings = settings
-        guard isHost, let room else { return }
-        let updated = CasualRoom(
-            id: room.id,
-            code: room.code,
-            gameType: room.gameType,
-            players: room.players,
-            status: room.status,
-            maxPlayers: room.maxPlayers,
-            minPlayers: room.minPlayers,
-            createdAt: room.createdAt,
-            settings: settings,
-            playMode: playMode,
-            teamState: playMode == .teamMode ? teamState : nil
-        )
-        self.room = updated
-        Task {
-            try? await roomService.updateRoomSettings(
-                roomID: room.id,
-                settings: settings,
-                hostSessionToken: sessionToken
-            )
-            await roomService.broadcastRoomState(updated)
-        }
-    }
-
     func buildPlayersForSession() -> [PlayerProfile] {
         guard let room else { return [] }
         return room.players.map { guest in
@@ -551,7 +519,6 @@ final class CasualRoomViewModel {
             self.room = room
             self.playMode = room.playMode
             self.teamState = room.teamState ?? .default
-            self.fakeAnswerSettings = room.settings
             self.gameStarted = room.status == .starting || room.status == .inProgress
             if room.status == .starting || room.status == .inProgress {
                 self.readyCheckActive = false
@@ -667,12 +634,6 @@ final class CasualRoomViewModel {
                 disconnect()
                 return
             }
-            let settings = FakeAnswerSettings(
-                rounds: roomRecord.settingsRounds,
-                answerTime: roomRecord.settingsAnswerTime,
-                voteTime: roomRecord.settingsVoteTime,
-                questionPack: FakeAnswerQuestionPack(rawValue: roomRecord.settingsQuestionPack) ?? .random
-            )
             let resolvedPlayMode = currentRoom.playMode
             let resolvedTeamState = resolvedPlayMode == .teamMode ? (currentRoom.teamState ?? teamState) : nil
             room = CasualRoom(
@@ -684,7 +645,6 @@ final class CasualRoomViewModel {
                 maxPlayers: roomRecord.maxPlayers,
                 minPlayers: roomRecord.minPlayers,
                 createdAt: roomRecord.createdAt ?? Date(),
-                settings: settings,
                 playMode: resolvedPlayMode,
                 teamState: resolvedTeamState
             )
